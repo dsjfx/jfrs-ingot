@@ -28,6 +28,10 @@ router.get('/adjacent/:id', blogApi.getAdjacentBlogs);
 router.get('/adjacent/category/:id', blogApi.getAdjacentBlogsInSameCategory);
 router.get('/adjacent/author/:id', blogApi.getAdjacentBlogsBySameAuthor);
 
+// 归档路由
+router.get('/archive', blogApi.getArchive);
+router.get('/archive/more', blogApi.getArchiveMore);
+
 router.use(authenticateToken); // 以下所有路由都需要认证
 
 // 需要认证的路由

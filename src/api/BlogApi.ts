@@ -378,9 +378,10 @@ class BlogApi {
   async getRelatedBlogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id as string, 10);
-      const size = parseInt(req.query.size as string, 10) || 10;
+      const size = parseInt(req.query.size as string, 10) || 3;
+       const subject = (req.query.subject as string) || 'article'
 
-      const relatedBlogs = await BlogService.getRelatedBlogs(id, size);
+      const relatedBlogs = await BlogService.getRelatedBlogs(id, size, subject);
 
       res.json(ResponseFactory.success(relatedBlogs, '查询相关博客成功'));
     } catch (error) {
@@ -449,10 +450,12 @@ class BlogApi {
       if (isNaN(id)) {
         throw new AppError('无效的博客ID', 400);
       }
+      const subject = (req.query.subject as string) || 'article';
 
       // 获取相邻博客
       const adjacent = await BlogService.getAdjacentBlogs(id, {
         status: 'published', // 只获取已发布的博客
+        subject,
       });
 
       res.json(ResponseFactory.success(adjacent, '获取相邻博客成功'));
@@ -576,14 +579,6 @@ class BlogApi {
         subject,
       });
 
-      // const data = ResponseFactory.page(
-      //   result.photos,
-      //   { current, size, total: result.total },
-      //   '成功获取标签下的照片'
-      // ) as ResponseData<PageResultAlbum<Photo>>;
-      // if (data && data.data) {
-      //   data.data.tag = result.tag;
-      // }
       if (!tag) {
         throw new AppError('标签不存在', 404);
       }
@@ -671,14 +666,6 @@ class BlogApi {
         subject,
       });
 
-      // const data = ResponseFactory.page(
-      //   result.photos,
-      //   { current, size, total: result.total },
-      //   '成功获取分类下的照片'
-      // ) as ResponseData<PageResultAlbum<Photo>>;
-      // if (data && data.data) {
-      //   data.data.category = result.category;
-      // }
       if (!category) {
         throw new AppError('分类不存在', 404);
       }
@@ -700,6 +687,59 @@ class BlogApi {
       next(error);
     }
   }
+
+  /**
+   * 获取博客归档数据
+   */
+  async getArchive(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 3;
+      const status = (req.query.status as string) || 'published';
+      const subject = (req.query.subject as string) || 'article';
+
+      const result = await BlogService.getArchive({
+        year,
+        month,
+        limit,
+        status,
+        subject,
+      });
+
+      res.json(ResponseFactory.success(result, '获取归档数据成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 懒加载更多归档年份
+   */
+  async getArchiveMore(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const startYear = req.query.startYear
+        ? parseInt(req.query.startYear as string, 10)
+        : undefined;
+      const endYear = req.query.endYear ? parseInt(req.query.endYear as string, 10) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 2;
+      const status = (req.query.status as string) || 'published';
+      const subject = (req.query.subject as string) || 'article';
+
+      const result = await BlogService.getArchiveByYears({
+        startYear,
+        endYear,
+        limit,
+        status,
+        subject,
+      });
+
+      res.json(ResponseFactory.success(result, '加载更多归档成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
 }
 
 export default BlogApi;

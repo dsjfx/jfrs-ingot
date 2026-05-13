@@ -24,7 +24,7 @@ class CommentApi {
     size: Joi.number().integer().min(1).max(100).default(10),
     blogId: Joi.number().integer().positive().required(),
     sort: Joi.string().optional(),
-  });
+  }).unknown(true);
 
   /**
    * 创建评论
