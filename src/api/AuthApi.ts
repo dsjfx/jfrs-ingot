@@ -64,7 +64,7 @@ class AuthApi {
   async getUserAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // 从请求中获取用户ID（由认证中间件设置）
-      const userId = parseInt(req .query.id as string, 10);
+      const userId = parseInt(req.query.id as string, 10);
       if (!userId) {
         throw new AppError('未认证', 401);
       }
@@ -89,7 +89,7 @@ class AuthApi {
   async getSimpleProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // 从请求中获取用户ID（由认证中间件设置）
-      const userId = parseInt(req .query.id as string, 10);
+      const userId = parseInt(req.query.id as string, 10);
       if (!userId) {
         throw new AppError('未认证', 401);
       }

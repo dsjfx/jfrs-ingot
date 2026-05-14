@@ -53,6 +53,18 @@ export interface UserProfile {
   updatedAt?: Date;
   blogCount?: number;
   commentCount?: number;
+  phone?: string;
+  gender?: string;
+  birthday?: Date;
+  bio?: string;
+  location?: string;
+  hobbies?: string[];
+  github?: string;
+  weibo?: string;
+  zhihu?: string;
+  website?: string;
+  motto?: string;
+  job?: string;
 }
 
 // 用户统计数据

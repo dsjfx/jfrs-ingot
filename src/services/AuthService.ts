@@ -201,6 +201,16 @@ class AuthService {
         }
       }
 
+      // 检查手机号是否已被使用
+      if (data.phone && data.phone !== user.phone) {
+        const existingUser = await User.findOne({
+          where: { phone: data.phone },
+        });
+        if (existingUser) {
+          throw new AppError('手机号已被使用', 400);
+        }
+      }
+
       // 如果要修改密码，验证原密码
       // if (data.password) {
       //   const isValidPassword = await bcrypt.compare(data.oldPassword, user.password);
@@ -216,21 +226,34 @@ class AuthService {
         email: data.email || user.email,
         // password: data.password || user.password,
         avatar: data.avatar || user.avatar,
+        phone: data.phone || user.phone,
+        gender: data.gender || user.gender,
+        birthday: data.birthday || user.birthday,
+        bio: data.bio || user.bio,
+        location: data.location || user.location,
+        hobbies: data.hobbies || user.hobbies,
+        github: data.github || user.github,
+        weibo: data.weibo || user.weibo,
+        zhihu: data.zhihu || user.zhihu,
+        website: data.website || user.website,
+        motto: data.motto || user.motto,
+        job: data.job || user.job,
       });
 
       logger.info(`用户信息更新成功: ${user.username} (ID: ${user.id})`);
 
       // 返回更新后的用户信息（不包含密码）
-      return {
-        id: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      };
+      // return {
+      //   id: user.id,
+      //   username: user.username,
+      //   nickname: user.nickname,
+      //   email: user.email,
+      //   role: user.role,
+      //   avatar: user.avatar,
+      //   createdAt: user.createdAt,
+      //   updatedAt: user.updatedAt,
+      // };
+      return user.getProfile();
     } catch (error) {
       logger.error('更新用户信息失败:', error);
       throw error;

@@ -69,24 +69,35 @@ export const loginSchema = Joi.object({
 // 更新个人信息验证
 export const updateProfileSchema = Joi.object({
   nickname: Joi.string().min(2).max(20).optional(),
-
   email: Joi.string().email().optional(),
-
   avatar: Joi.string().uri().optional().allow(''),
+  bio: Joi.string().optional().allow(''),
+  phone: Joi.string().optional().allow(''),
+  birthday: Joi.date().optional().allow(''),
+  gender: Joi.string().optional().allow(''),
+  location: Joi.string().optional().allow(''),
+  hobbies: Joi.string().optional().allow(''),
+  github: Joi.string().uri().optional().allow(''),
+  weibo: Joi.string().uri().optional().allow(''),
+  zhihu: Joi.string().uri().optional().allow(''),
+  website: Joi.string().uri().optional().allow(''),
+  motto: Joi.string().optional().allow(''),
+  job: Joi.string().optional().allow(''),
+  position: Joi.string().optional().allow(''),
 
-  oldPassword: Joi.string().min(6).when('password', {
-    is: Joi.exist(),
-    then: Joi.required(),
-    otherwise: Joi.optional(),
-  }),
+  // oldPassword: Joi.string().min(6).when('password', {
+  //   is: Joi.exist(),
+  //   then: Joi.required(),
+  //   otherwise: Joi.optional(),
+  // }),
 
-  password: Joi.string().min(6).max(100).optional(),
+  // password: Joi.string().min(6).max(100).optional(),
 
-  confirmPassword: Joi.string().valid(Joi.ref('password')).when('password', {
-    is: Joi.exist(),
-    then: Joi.required(),
-    otherwise: Joi.optional(),
-  }),
+  // confirmPassword: Joi.string().valid(Joi.ref('password')).when('password', {
+  //   is: Joi.exist(),
+  //   then: Joi.required(),
+  //   otherwise: Joi.optional(),
+  // }),
 });
 
 // 修改密码验证
