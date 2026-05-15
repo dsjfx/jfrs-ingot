@@ -168,6 +168,29 @@ class User extends Model {
   })
   job?: string;
 
+  @Column({
+    type: DataType.STRING(200),
+    allowNull: true,
+    validate: {
+      isUrl: true,
+    },
+  })
+  twitter?: string;
+
+  @Column({
+    type: DataType.STRING(100),
+    allowNull: true,
+    comment: 'ICP备案号',
+  })
+  icpLicense?: string;
+
+  @Column({
+    type: DataType.STRING(100),
+    allowNull: true,
+    comment: '公安备案号',
+  })
+  publicSecurityLicense?: string;
+
   // 获取年龄（根据生日计算）
   get age(): number | null {
     if (!this.birthday) return null;
@@ -225,6 +248,7 @@ class User extends Model {
       location: this.location,
       hobbies: this.hobbies,
       github: this.github,
+      twitter: this.twitter,
       weibo: this.weibo,
       zhihu: this.zhihu,
       website: this.website,

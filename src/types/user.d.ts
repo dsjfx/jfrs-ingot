@@ -60,6 +60,7 @@ export interface UserProfile {
   location?: string;
   hobbies?: string[];
   github?: string;
+  twitter?: string;
   weibo?: string;
   zhihu?: string;
   website?: string;

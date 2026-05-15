@@ -161,6 +161,18 @@ class AuthService {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        phone: user.phone,
+        gender: user.gender,
+        birthday: user.birthday,
+        bio: user.bio,
+        location: user.location,
+        hobbies: user.hobbies,
+        github: user.github,
+        weibo: user.weibo,
+        zhihu: user.zhihu,
+        website: user.website,
+        motto: user.motto,
+        job: user.job,
       };
 
       return profile;

@@ -76,7 +76,7 @@ export const updateProfileSchema = Joi.object({
   birthday: Joi.date().optional().allow(''),
   gender: Joi.string().optional().allow(''),
   location: Joi.string().optional().allow(''),
-  hobbies: Joi.string().optional().allow(''),
+  hobbies: Joi.array().items(Joi.string()).optional().allow(''),
   github: Joi.string().uri().optional().allow(''),
   weibo: Joi.string().uri().optional().allow(''),
   zhihu: Joi.string().uri().optional().allow(''),
