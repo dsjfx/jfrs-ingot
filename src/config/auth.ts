@@ -15,7 +15,7 @@ export const tokenConfig = {
   issuer: 'jingot',
 
   // Token 受众
-  audience: ['jcandy', 'jcandy-admin'],
+  audience: ['jcandy', 'jcandy-admin', 'jcandy-photo'],
 
   // 是否允许同一账号多处登录
   allowMultipleLogin: false,

@@ -69,15 +69,15 @@ class AuthApi {
         throw new AppError('未认证', 401);
       }
 
-      let avatar = null;
+      // let avatar = null;
 
       // 调用服务
-      const user = await AuthService.getUserProfile(userId);
-      if (user && user.avatar) {
-        avatar = user.avatar;
-      }
+      const { avatar, icpLicense, publicSecurityLicense } = await AuthService.getUserProfile(userId);
+      // if (user && user.avatar) {
+      //   avatar = user.avatar;
+      // }
 
-      res.json(ResponseFactory.success({ avatar }, '获取用户头像成功'));
+      res.json(ResponseFactory.success({ avatar, icpLicense, publicSecurityLicense }, '获取用户头像成功'));
     } catch (error) {
       next(error);
     }

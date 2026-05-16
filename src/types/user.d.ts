@@ -66,6 +66,8 @@ export interface UserProfile {
   website?: string;
   motto?: string;
   job?: string;
+  icpLicense?: string;
+  publicSecurityLicense?: string;
 }
 
 // 用户统计数据

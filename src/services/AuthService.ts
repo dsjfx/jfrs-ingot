@@ -173,6 +173,8 @@ class AuthService {
         website: user.website,
         motto: user.motto,
         job: user.job,
+        icpLicense: user.icpLicense,
+        publicSecurityLicense: user.publicSecurityLicense,
       };
 
       return profile;
