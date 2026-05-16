@@ -26,7 +26,10 @@
     "seed": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
     "seed:undo": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo",
     "seed:undo:all": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
-    "deploy:db": "cross-env NODE_ENV=production npm run migrate && cross-env NODE_ENV=production npm run seed"
+    "deploy:create": "cross-env NODE_ENV=production ts-node ./scripts/create-db.ts",
+    "deploy:drop": "cross-env NODE_ENV=production ts-node ./scripts/drop-db.ts",
+    "deploy:init": "cross-env NODE_ENV=production npm run migrate && cross-env NODE_ENV=production npm run seed",
+    "deploy:reset": "npm run deploy:drop && npm run deploy:create && npm run deploy:init"
   },
   "_moduleAliases": {
     "@": "./dist"
