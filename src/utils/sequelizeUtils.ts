@@ -51,26 +51,26 @@ export class SequelizeUtils {
 }
 
 // 常用查询快捷方式
-export const QueryHelpers = {
-  // 状态查询
-  isPublished: { status: 'published' },
-  isDraft: { status: 'draft' },
+// export const QueryHelpers = {
+//   // 状态查询
+//   isPublished: { status: 'published' },
+//   isDraft: { status: 'draft' },
 
-  // 时间查询
-  createdThisMonth: {
-    createdAt: {
-      [Op.gte]: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    },
-  },
+//   // 时间查询
+//   createdThisMonth: {
+//     createdAt: {
+//       [Op.gte]: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+//     },
+//   },
 
-  // 范围查询
-  viewCountGt: (count: number) => ({ viewCount: { [Op.gt]: count } }),
+//   // 范围查询
+//   viewCountGt: (count: number) => ({ viewCount: { [Op.gt]: count } }),
 
-  // 关联查询
-  withAuthor: (authorId: number) => ({ authorId }),
+//   // 关联查询
+//   withAuthor: (authorId: number) => ({ authorId }),
 
-  // 排除已删除
-  notDeleted: { deletedAt: null },
-};
+//   // 排除已删除
+//   notDeleted: { deletedAt: null },
+// };
 
 export default SequelizeUtils;

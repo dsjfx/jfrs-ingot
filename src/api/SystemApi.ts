@@ -3,7 +3,7 @@ import SystemService from '../services/SystemService';
 import { ConfigGroup } from '../models/System';
 
 class SystemApi {
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(_req: Request, res: Response): Promise<void> {
     try {
       const configs = await SystemService.getAllConfigs();
       res.json({
