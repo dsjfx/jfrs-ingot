@@ -50,7 +50,7 @@ class BlogService {
         await blog.$set('tags', blogData.tagIds);
       }
 
-      if (blogData.status === 'published') {
+      if (!blog.publishedAt && blogData.status === 'published') {
         blog.publishedAt = blog.createdAt;
         await blog.save();
       }
@@ -164,7 +164,7 @@ class BlogService {
 
       const oldCategoryId = blog.categoryId;
 
-      if (updateData.status === 'published') {
+      if (!blog.publishedAt && updateData.status === 'published') {
         updateData.publishedAt = new Date().toLocaleString();
       }
 
