@@ -13,6 +13,7 @@
     "dev": "cross-env NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register src/server.ts",
     "dev:debug": "cross-env DEBUG=jingot:* nodemon src/server.ts",
     "build": "tsc",
+    "build:scripts": "tsc --project tsconfig.scripts.json",
     "start": "node -r module-alias/register dist/server.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
@@ -26,8 +27,8 @@
     "seed": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
     "seed:undo": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo",
     "seed:undo:all": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
-    "deploy:create": "cross-env NODE_ENV=production ts-node ./scripts/create-db.ts",
-    "deploy:drop": "cross-env NODE_ENV=production ts-node ./scripts/drop-db.ts",
+    "deploy:create": "cross-env NODE_ENV=production node ./scripts/create-db.js",
+    "deploy:drop": "cross-env NODE_ENV=production node ./scripts/drop-db.js",
     "deploy:init": "cross-env NODE_ENV=production npm run migrate && cross-env NODE_ENV=production npm run seed",
     "deploy:reset": "npm run deploy:drop && npm run deploy:create && npm run deploy:init"
   },
