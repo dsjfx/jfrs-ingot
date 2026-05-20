@@ -1,5 +1,5 @@
-import init from '../src/init';
-init();
+// import init from '../src/init';
+// init();
 import mysql from 'mysql2/promise';
 import config from '../src/config';
 import logger from '../src/utils/logger';
