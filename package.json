@@ -25,11 +25,12 @@
     "migrate:undo": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:migrate:undo",
     "migrate:undo:all": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:migrate:undo:all",
     "seed": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
+    "seed:serve": "npx sequelize-cli db:seed:all",
     "seed:undo": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo",
     "seed:undo:all": "ts-node ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
-    "deploy:create": "cross-env NODE_ENV=production node ./scripts/create-db.js",
-    "deploy:drop": "cross-env NODE_ENV=production node ./scripts/drop-db.js",
-    "deploy:init": "cross-env NODE_ENV=production npm run migrate && cross-env NODE_ENV=production npm run seed",
+    "deploy:create": "NODE_ENV=production node ./scripts/create-db.js",
+    "deploy:drop": "NODE_ENV=production node ./scripts/drop-db.js",
+    "deploy:init": "NODE_ENV=production npm run migrate && NODE_ENV=production npm run seed:serve",
     "deploy:reset": "npm run deploy:drop && npm run deploy:create && npm run deploy:init"
   },
   "_moduleAliases": {

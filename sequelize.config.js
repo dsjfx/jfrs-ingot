@@ -2,11 +2,8 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, './.env') });
 // 根据环境加载对应的 .env 文件
-const envFile = process.env.NODE_ENV === 'production' 
-  ? '.env.production' 
-  : '.env.development';
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 require('dotenv').config({ path: path.join(__dirname, envFile) });
-
 
 module.exports = {
   development: {
