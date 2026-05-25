@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '@/utils/logger';
-import HttpStatus from '@/utils/HttpStatus';
+import logger from '../utils/logger';
+import HttpStatus from '../utils/HttpStatus';
 
 /**
  * 自定义应用错误类

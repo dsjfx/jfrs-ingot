@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import BlogApi from '../api/BlogApi';
 import { authorizeRoles, optionalAuth } from '../middleware/authority';
-import PhotoApi from '@/api/PhotoApi';
+import PhotoApi from '../api/PhotoApi';
 
 const router: Router = Router();
 

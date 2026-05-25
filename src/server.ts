@@ -4,7 +4,7 @@ import app from './app';
 import { sequelize } from './models';
 import { validateEnv } from './config';
 import logger from './utils/logger';
-import { registerServices } from '@/utils/redisUtil';
+import { registerServices } from './utils/redisUtil';
 
 // 应用启动时第一时间验证
 validateEnv();

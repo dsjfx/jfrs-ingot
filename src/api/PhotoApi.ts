@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import PhotoService from '../services/PhotoService';
 import { AppError } from '../middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class PhotoApi {
   /**

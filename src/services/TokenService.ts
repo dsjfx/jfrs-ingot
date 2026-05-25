@@ -1,14 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { tokenConfig } from '@/config/auth';
+import { tokenConfig } from '../config/auth';
 import { CacheService } from './RedisCacheService';
-import { Autowired } from '@/core/DIContainer';
-import logger from '@/utils/logger';
-import { User } from '@/models';
-import { RefreshTokenResponse, TokenPayload } from '@/types/auth';
-import { PRE_REFRESH_TOKEN } from '@/utils/redisUtil';
-import { LoginResponse } from '@/types/user';
-import { AppError } from '@/middleware/errorHandler';
+import { Autowired } from '../core/DIContainer';
+import logger from '../utils/logger';
+import { User } from '../models';
+import { RefreshTokenResponse, TokenPayload } from '../types/auth';
+import { PRE_REFRESH_TOKEN } from '../utils/redisUtil';
+import { LoginResponse } from '../types/user';
+import { AppError } from '../middleware/errorHandler';
 
 /**
  * JWT Token 服务类

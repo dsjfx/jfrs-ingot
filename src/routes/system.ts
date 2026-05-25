@@ -1,4 +1,4 @@
-import SystemApi from '@/api/SystemApi';
+import SystemApi from '../api/SystemApi';
 import { Router } from 'express';
 
 const router: Router = Router();

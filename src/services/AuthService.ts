@@ -10,7 +10,7 @@ import {
   UserLogin,
   UserProfile,
   UserRegister,
-} from '@/types/user';
+} from '../types/user';
 
 class AuthService {
   /**

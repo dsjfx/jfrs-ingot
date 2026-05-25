@@ -1,5 +1,5 @@
-import { Album } from '@/types/photo';
-import HttpStatus from '@/utils/HttpStatus';
+import { Album } from '../types/photo';
+import HttpStatus from '../utils/HttpStatus';
 
 // 响应工具类
 export class ResponseFactory {

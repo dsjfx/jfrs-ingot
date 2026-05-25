@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Service, Autowired } from '../core/DIContainer';
 import { CacheService } from './RedisCacheService';
 import logger from '../utils/logger';
-import { expiresIn, PRE_CAPTCHA } from '@/utils/redisUtil';
+import { expiresIn, PRE_CAPTCHA } from '../utils/redisUtil';
 
 export interface CaptchaResponse {
   id: string;

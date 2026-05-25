@@ -4,7 +4,7 @@ import TagService from '../services/TagService';
 import { AppError } from '../middleware/errorHandler';
 // import { AuthRequest } from '../types';
 import logger from '../utils/logger';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class TagApi {
   // 验证模式
@@ -87,17 +87,22 @@ class TagApi {
       //     },
       //   },
       // });
-      res.json(ResponseFactory.success({
-        tags: result.tags,
-        pagination: {
-          page,
-          limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / limit),
-          hasNext: page * limit < result.total,
-          hasPrev: page > 1,
-        },
-      }, '标签查询成功'));
+      res.json(
+        ResponseFactory.success(
+          {
+            tags: result.tags,
+            pagination: {
+              page,
+              limit,
+              total: result.total,
+              totalPages: Math.ceil(result.total / limit),
+              hasNext: page * limit < result.total,
+              hasPrev: page > 1,
+            },
+          },
+          '标签查询成功'
+        )
+      );
     } catch (error) {
       next(error);
     }
@@ -202,19 +207,21 @@ class TagApi {
       //     },
       //   },
       // });
-      res.json(ResponseFactory.success({
-        success: true,
-        data: {
-          tag: result.tag,
-          blogs: result.blogs,
-          pagination: {
-            page,
-            limit,
-            total: result.total,
-            totalPages: Math.ceil(result.total / limit),
+      res.json(
+        ResponseFactory.success({
+          success: true,
+          data: {
+            tag: result.tag,
+            blogs: result.blogs,
+            pagination: {
+              page,
+              limit,
+              total: result.total,
+              totalPages: Math.ceil(result.total / limit),
+            },
           },
-        },
-      }));
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -271,15 +278,17 @@ class TagApi {
       //     },
       //   },
       // });
-      res.json(ResponseFactory.success({
-        tags: result.tags,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: result.total,
-          totalPages: Math.ceil(result.total / limitNum),
-        },
-      }));
+      res.json(
+        ResponseFactory.success({
+          tags: result.tags,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total: result.total,
+            totalPages: Math.ceil(result.total / limitNum),
+          },
+        })
+      );
     } catch (error) {
       next(error);
     }

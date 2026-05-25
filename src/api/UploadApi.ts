@@ -2,7 +2,7 @@ import path from 'path';
 import { Request, Response, NextFunction } from 'express';
 import UploadService from '../services/UploadService';
 import { AppError } from '../middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class UploadApi {
   /**

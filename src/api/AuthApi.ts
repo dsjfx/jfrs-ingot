@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import AuthService from '@/services/AuthService';
-import tokenService from '@/services/TokenService';
+import AuthService from '../services/AuthService';
+import tokenService from '../services/TokenService';
 import {
   registerSchema,
   loginSchema,
   updateProfileSchema,
   changePasswordSchema,
-} from '@/core/AuthValidator';
-import { ResponseFactory } from '@/utils/ResponseFactory';
-import { AppError } from '@/middleware/errorHandler';
+} from '../core/AuthValidator';
+import { ResponseFactory } from '../utils/ResponseFactory';
+import { AppError } from '../middleware/errorHandler';
 
 class AuthApi {
   /**

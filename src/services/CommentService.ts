@@ -4,7 +4,7 @@ import Blog from '../models/Blog';
 import User from '../models/User';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
-import type { CommentFilters } from '@/types';
+import type { CommentFilters } from '../types';
 
 class CommentService {
   /**

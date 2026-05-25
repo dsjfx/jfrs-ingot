@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
-import { Service } from '@/core/DIContainer';
+import { Service } from '../core/DIContainer';
 import logger from '../utils/logger';
 
 export interface CacheService {

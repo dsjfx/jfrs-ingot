@@ -4,7 +4,7 @@ import CategoryService from '../services/CategoryService';
 import { AppError } from '../middleware/errorHandler';
 // import { AuthRequest } from '../types';
 import logger from '../utils/logger';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class CategoryApi {
   // 验证模式
@@ -61,7 +61,7 @@ class CategoryApi {
 
       const { categories, total } = await CategoryService.getCategories(current, size, filters);
 
-      res.json(ResponseFactory.page(categories, { current, size, total } , '分类查询成功'));
+      res.json(ResponseFactory.page(categories, { current, size, total }, '分类查询成功'));
     } catch (error) {
       next(error);
     }

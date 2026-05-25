@@ -1,5 +1,5 @@
 import { container } from '../core/DIContainer';
-import { RedisCache } from '@/services/RedisCacheService';
+import { RedisCache } from '../services/RedisCacheService';
 import logger from '../utils/logger';
 
 // 注册服务

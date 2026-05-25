@@ -3,7 +3,7 @@ import Joi from 'joi';
 import CommentService from '../services/CommentService';
 // import { AuthRequest } from '../types';
 import logger from '../utils/logger';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 import { AppError } from '../middleware/errorHandler';
 
 class CommentApi {

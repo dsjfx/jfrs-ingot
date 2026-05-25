@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
-import { AuthRequest } from '@/types';
+import { AuthRequest } from '../types';
 
 /**
  * 请求日志中间件

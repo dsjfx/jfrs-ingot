@@ -1,7 +1,7 @@
 // import path from 'path';
 import { Sequelize } from 'sequelize-typescript';
 import config from './index';
-import logger from '@/utils/logger';
+import logger from '../utils/logger';
 
 class Database {
   private static instance: Sequelize;

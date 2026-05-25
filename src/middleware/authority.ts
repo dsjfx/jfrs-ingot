@@ -2,9 +2,9 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger';
 import { AppError } from './errorHandler';
-import { AuthRequest } from '@/types';
-import { tokenConfig } from '@/config/auth';
-import { TokenPayload } from '@/types/auth';
+import { AuthRequest } from '../types';
+import { tokenConfig } from '../config/auth';
+import { TokenPayload } from '../types/auth';
 
 /**
  * 认证中间件 - 验证 JWT Token

@@ -2,7 +2,7 @@
  * 用户相关类型定义
  */
 
-import { EUserRole } from '@/core/Enumers';
+import { EUserRole } from '../core/Enumers';
 
 // 用户角色
 export type UserRole = `${EUserRole}`;

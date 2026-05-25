@@ -2,7 +2,7 @@ import Photo from '../models/Photo';
 import Blog from '../models/Blog';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
-import { PhotoData } from '@/types/photo';
+import { PhotoData } from '../types/photo';
 import { Transaction } from 'sequelize';
 
 class PhotoService {

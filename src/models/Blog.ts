@@ -12,7 +12,7 @@ import User from './User';
 import Category from './Category';
 import Tag from './Tag';
 import BlogTag from './BlogTag';
-import { EBlogType, EBlogVisibility, ECommentPermission } from '@/core/Enumers';
+import { EBlogType, EBlogVisibility, ECommentPermission } from '../core/Enumers';
 import Photo from './Photo';
 
 @Table({

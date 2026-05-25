@@ -1,8 +1,8 @@
 import { Table, Column, Model, DataType, HasMany, BeforeCreate } from 'sequelize-typescript';
 import bcrypt from 'bcryptjs';
 import Blog from './Blog';
-import { EUserRole } from '@/core/Enumers';
-import { UserProfile } from '@/types';
+import { EUserRole } from '../core/Enumers';
+import { UserProfile } from '../types';
 
 @Table({
   tableName: 'ingot_user',

@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import { SystemConfig, ConfigGroup, ConfigType } from '../models/System';
-import { ConfigGroupData } from '@/types/config';
+import { ConfigGroupData } from '../types/config';
 
 class SystemService {
   /**

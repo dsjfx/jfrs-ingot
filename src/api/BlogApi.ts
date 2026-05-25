@@ -4,9 +4,9 @@ import BlogService from '../services/BlogService';
 import { AuthRequest } from '../types';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
-import { User } from '@/models';
-import { ResponseFactory } from '@/utils/ResponseFactory';
-import { Album } from '@/types/photo';
+import { User } from '../models';
+import { ResponseFactory } from '../utils/ResponseFactory';
+import { Album } from '../types/photo';
 
 class BlogApi {
   // 验证模式
@@ -379,7 +379,7 @@ class BlogApi {
     try {
       const id = parseInt(req.params.id as string, 10);
       const size = parseInt(req.query.size as string, 10) || 3;
-       const subject = (req.query.subject as string) || 'article'
+      const subject = (req.query.subject as string) || 'article';
 
       const relatedBlogs = await BlogService.getRelatedBlogs(id, size, subject);
 

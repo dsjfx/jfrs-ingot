@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { CaptchaService } from '../services/CaptchaService';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 import logger from '../utils/logger';
 
 class CaptchaApi {

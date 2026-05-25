@@ -17,8 +17,8 @@ import type {
   ArchiveResponse,
 } from '../types/blog';
 import { WhereOptions, QueryTypes, Sequelize, CountOptions } from 'sequelize';
-import { generateRandomOffsets } from '@/utils/FuncUtil';
-import { PhotoData } from '@/types/photo';
+import { generateRandomOffsets } from '../utils/FuncUtil';
+import { PhotoData } from '../types/photo';
 import PhotoService from './PhotoService';
 
 class BlogService {
@@ -2064,19 +2064,19 @@ class BlogService {
       }
 
       // 处理年份数组（优先于单个年份）
-    if (pYears && pYears.length > 0) {
-      const yearConditions = pYears.map(y => ({
-        [Op.and]: [
-          sequelize.where(sequelize.fn('YEAR', sequelize.col('published_at')), y),
-          // 如果需要精确到日期的范围查询
-          // sequelize.where(sequelize.col('publishedAt'), {
-          //   [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59)]
-          // })
-        ]
-      }));
-      
-      where[Op.or] = yearConditions;
-    }
+      if (pYears && pYears.length > 0) {
+        const yearConditions = pYears.map(y => ({
+          [Op.and]: [
+            sequelize.where(sequelize.fn('YEAR', sequelize.col('published_at')), y),
+            // 如果需要精确到日期的范围查询
+            // sequelize.where(sequelize.col('publishedAt'), {
+            //   [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59)]
+            // })
+          ]
+        }));
+
+        where[Op.or] = yearConditions;
+      }
 
       if (month && year) {
         where.publishedAt = {
