@@ -54,7 +54,7 @@ class BlogApi {
     current: Joi.number().integer().min(1).default(1),
     size: Joi.number().integer().min(1).max(100).default(10),
     status: Joi.string().valid('draft', 'published', 'archived').empty('').optional(),
-    subject: Joi.string().valid('article', 'photo').optional().allow(''),
+    subject: Joi.string().optional().allow(''),
     categoryId: Joi.number().integer().positive().empty('').optional(),
     tagId: Joi.number().integer().positive().optional(),
     authorId: Joi.number().integer().positive().optional(),

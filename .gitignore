@@ -69,3 +69,5 @@ uploads/
 tests/
 dist/
 
+src/**/*.js
+
