@@ -11,8 +11,7 @@ import uploadRoutes from './upload';
 const router: Router = Router();
 
 // API 版本前缀
-// const API_PREFIX = '/api/v1';
-const API_PREFIX = '/jdmk';
+const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // 注册路由
 router.use(`${API_PREFIX}/auth`, authRoutes);

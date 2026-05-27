@@ -70,4 +70,5 @@ tests/
 dist/
 
 src/**/*.js
+script/*.js
 

@@ -749,6 +749,7 @@ class BlogService {
       status?: string;
       categoryId?: number;
       excludeIds?: number[];
+      subject?: string;
     } = {}
   ): Promise<Blog[]> {
     try {
@@ -759,10 +760,12 @@ class BlogService {
         SELECT * FROM ingot_blogs 
         WHERE is_top = 1 
         AND status = :status
+        AND subject = :subject
       `;
 
       const replacements: any = {
         status: options.status || 'published',
+        subject: options.subject || Constance.DEFAULT_SUBJECT,
       };
 
       if (options.categoryId) {

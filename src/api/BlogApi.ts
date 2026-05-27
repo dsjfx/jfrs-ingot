@@ -318,8 +318,9 @@ class BlogApi {
   async getFeaturedBlogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const size = parseInt(req.query.size as string, 10) || 1;
+      const subject = (req.query.subject as string) || Constance.DEFAULT_SUBJECT;
 
-      const blogs = await BlogService.getRandomTopBlogsSQL(size, { status: 'published' });
+      const blogs = await BlogService.getRandomTopBlogsSQL(size, { status: 'published', subject });
 
       res.json(
         ResponseFactory.page(blogs, { current: 1, size, total: blogs.length }, '查询精选博客成功')
