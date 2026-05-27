@@ -13,21 +13,22 @@ const photoApi = new PhotoApi();
 
 router.get('/blogs', optionalAuth, blogApi.getBlogs);
 
-router.get('/featured', blogApi.getFeaturedBlogs);
-
-router.get('/with-photos', optionalAuth, blogApi.getBlogsWithPhotos);
-
-// 获取博客的所有照片
-router.get('/view/:id', optionalAuth, blogApi.getBlogWithPhotos);
-
 router.get('/search', blogApi.getBlogs);
 
-router.get('/search-photos', optionalAuth, blogApi.getBlogsWithPhotos);
+router.get('/featured', blogApi.getFeaturedBlogs);
 
-router.get('/group/tag', blogApi.groupPhotosByTag);
-router.get('/group/category', blogApi.groupPhotosByCategory);
-router.get('/tag/:tagId', blogApi.getPhotosByTag);
-router.get('/category/:categoryId', blogApi.getPhotosByCategory);
+router.get('/with-photos', optionalAuth, photoApi.getBlogsWithPhotos);
+
+// 获取博客的所有照片
+router.get('/view/:id', optionalAuth, photoApi.getBlogWithPhotos);
+
+router.get('/search-photos', optionalAuth, photoApi.getBlogsWithPhotos);
+
+// 相册集
+router.get('/group/tag', photoApi.groupPhotosByTag);
+router.get('/group/category', photoApi.groupPhotosByCategory);
+router.get('/tag/:tagId', photoApi.getPhotosByTag);
+router.get('/category/:categoryId', photoApi.getPhotosByCategory);
 
 // 获取博客的封面图
 router.get('/:blogId/cover', photoApi.getCoverPhoto);

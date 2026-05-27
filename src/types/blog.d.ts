@@ -2,8 +2,6 @@
  * 博客相关类型定义
  */
 
-import { PhotoData } from './photo';
-
 // 博客状态
 export type BlogStatus = 'draft' | 'published' | 'archived';
 
@@ -166,37 +164,6 @@ export interface BlogFilters {
   authorId?: number;
   search?: string;
   isTop?: number; // 添加置顶筛选
-}
-
-// 标签分组结果接口
-export interface PhotoGroupResult {
-  id: number;
-  name: string;
-  slug?: string;
-  description?: string;
-  photos?: PhotoData[];
-  photoCount: number;
-  coverUrl?: string;
-  coverThumbnail?: string;
-  coverPhoto?: {
-    id: number;
-    url: string;
-    thumbnailUrl: string;
-    width: number;
-    height: number;
-  };
-}
-
-export interface PhotoGroupParam {
-  current?: number; // 当前页码
-  size?: number; // 返回的数量限制
-  sortBy?: string; // 排序字段：'name', 'photoCount', 'createdAt'
-  sortOrder?: 'ASC' | 'DESC'; // 排序方向
-  ids?: number[]; // 指定标签(分类)ID
-  slugs?: string[]; // 指定标签(分类)slug
-  search?: string; // 搜索关键词
-  status?: string; // 博客状态
-  subject?: string; // 博客类型
 }
 
 export interface ArchiveOptions {

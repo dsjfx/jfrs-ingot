@@ -644,6 +644,41 @@ class CommentService {
       throw error;
     }
   }
+
+  /**
+   * 添加博客评论
+   */
+  async addComment(blogId: number, userId: number, content: string, parentId?: number) {
+    try {
+      // 检查博客是否存在
+      const blog = await Blog.findByPk(blogId);
+      if (!blog) {
+        throw new AppError('博客不存在', 404);
+      }
+
+      // 如果有关联的父评论，检查父评论是否存在
+      if (parentId) {
+        const parentComment = await Comment.findByPk(parentId);
+        if (!parentComment) {
+          throw new AppError('父评论不存在', 404);
+        }
+      }
+
+      const comment = await Comment.create({
+        blogId,
+        userId,
+        content,
+        parentId,
+        status: 'pending', // 默认需要审核
+      });
+
+      logger.info(`用户 ${userId} 为博客 ${blogId} 添加评论`);
+      return comment;
+    } catch (error) {
+      logger.error('添加评论失败:', error);
+      throw error;
+    }
+  }
 }
 
 export default new CommentService();

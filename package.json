@@ -14,7 +14,7 @@
     "dev:debug": "cross-env DEBUG=jingot:* nodemon src/server.ts",
     "build": "tsc",
     "build:scripts": "tsc --project tsconfig.scripts.json",
-    "start": "node -r module-alias/register dist/server.js",
+    "start": "node dist/server.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",

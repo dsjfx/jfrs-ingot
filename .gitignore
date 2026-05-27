@@ -62,7 +62,10 @@ typings/
 # next.js build output
 .next
 
+.map
+
 db/
 uploads/
 tests/
+dist/
 

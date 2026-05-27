@@ -33,3 +33,24 @@ export function generateRandomOffsets(total: number, count: number): number[] {
 
   return offsets.sort((a, b) => a - b);
 }
+
+/**
+ * 获取月份名称
+ */
+export function getMonthName(month: number): string {
+  const monthNames = [
+    '1月',
+    '2月',
+    '3月',
+    '4月',
+    '5月',
+    '6月',
+    '7月',
+    '8月',
+    '9月',
+    '10月',
+    '11月',
+    '12月',
+  ];
+  return monthNames[month - 1];
+}

@@ -2,11 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import BlogService from '../services/BlogService';
 import { AuthRequest } from '../types';
-import logger from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
 import { User } from '../models';
+import logger from '../utils/logger';
 import { ResponseFactory } from '../utils/ResponseFactory';
-import { Album } from '../types/photo';
+import Constance from '../utils/Constance';
 
 class BlogApi {
   // 验证模式
@@ -133,31 +133,6 @@ class BlogApi {
   }
 
   /**
-   * 获取博客列表并同时加载照片
-   */
-  async getBlogsWithPhotos(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // 验证查询参数
-      const { error, value } = BlogApi.querySchema.validate(req.query);
-      if (error) {
-        throw new AppError(error.details[0].message, 400);
-      }
-
-      const { current, size, ...filters } = value;
-
-      const { blogs, total } = await BlogService.getBlogsWithPhotos({
-        current,
-        size,
-        filters,
-      });
-
-      res.json(ResponseFactory.page(blogs, { current, size, total }, '博客数据查询成功'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * 获取博客详情
    */
   async getBlogById(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -168,24 +143,6 @@ class BlogApi {
       }
 
       const blog = await BlogService.getBlogById(id);
-
-      res.json(ResponseFactory.success(blog, '查询博客详情成功'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 获取博客详情（包含照片）
-   */
-  async getBlogWithPhotos(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const id = parseInt(req.params.id as string, 10);
-      if (isNaN(id)) {
-        throw new AppError('无效的博客ID', 400);
-      }
-
-      const blog = await BlogService.getBlogWithPhotos(id);
 
       res.json(ResponseFactory.success(blog, '查询博客详情成功'));
     } catch (error) {
@@ -379,7 +336,7 @@ class BlogApi {
     try {
       const id = parseInt(req.params.id as string, 10);
       const size = parseInt(req.query.size as string, 10) || 3;
-      const subject = (req.query.subject as string) || 'article';
+      const subject = (req.query.subject as string) || Constance.DEFAULT_SUBJECT;
 
       const relatedBlogs = await BlogService.getRelatedBlogs(id, size, subject);
 
@@ -450,7 +407,7 @@ class BlogApi {
       if (isNaN(id)) {
         throw new AppError('无效的博客ID', 400);
       }
-      const subject = (req.query.subject as string) || 'article';
+      const subject = (req.query.subject as string) || Constance.DEFAULT_SUBJECT;
 
       // 获取相邻博客
       const adjacent = await BlogService.getAdjacentBlogs(id, {
@@ -515,180 +472,6 @@ class BlogApi {
   }
 
   /**
-   * 根据标签分组查询所有照片
-   */
-  async groupPhotosByTag(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const current = parseInt(req.query.current as string, 10) || 1;
-      const size = parseInt(req.query.size as string, 10) || 10;
-      const sortBy = (req.query.sortBy as string) || 'name';
-      const sortOrder = (req.query.sortOrder as 'ASC' | 'DESC') || 'DESC';
-      const status = (req.query.status as string) || 'published';
-      const search = req.query.search as string;
-      const subject = (req.query.subject as string) || 'photo';
-
-      let tagIds: number[] | undefined;
-      let tagSlugs: string[] | undefined;
-
-      if (req.query.tagIds) {
-        tagIds = (req.query.tagIds as string).split(',').map(id => parseInt(id, 10));
-      }
-      if (req.query.tagSlugs) {
-        tagSlugs = (req.query.tagSlugs as string).split(',');
-      }
-
-      const { records, total, safeSize } = await BlogService.groupPhotosByTag({
-        current,
-        size,
-        sortBy,
-        sortOrder,
-        ids: tagIds,
-        slugs: tagSlugs,
-        search,
-        status,
-        subject,
-      });
-
-      res.json(
-        ResponseFactory.page(records, { total, current, size: safeSize }, `成功获取标签分组的照片`)
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 获取标签下的所有照片
-   */
-  async getPhotosByTag(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const tagId = parseInt(req.params.tagId as string, 10);
-      if (isNaN(tagId)) {
-        throw new AppError('无效的标签ID', 400);
-      }
-
-      const current = parseInt(req.query.current as string, 10) || 1;
-      const size = parseInt(req.query.size as string, 10) || 20;
-      const status = (req.query.status as string) || 'published';
-      const subject = (req.query.subject as string) || 'photo';
-
-      const { photos, total, tag } = await BlogService.getPhotosByTag(tagId, {
-        current,
-        size,
-        status,
-        subject,
-      });
-
-      if (!tag) {
-        throw new AppError('标签不存在', 404);
-      }
-      const firstPhoto = photos[0] || { url: '', thumbnailUrl: '' };
-      const data: Album = {
-        id: tag.id,
-        name: tag.name,
-        description: tag.description || '暂无描述',
-        coverUrl: firstPhoto.url,
-        coverThumbnail: firstPhoto.thumbnailUrl,
-        isPublic: true,
-        photos: photos,
-        photoCount: photos.length,
-        createdAt: tag.createdAt,
-        updatedAt: tag.updatedAt,
-      };
-      res.json(ResponseFactory.pageAlbum(data, { current, size, total }, '成功获取标签下的照片'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 根据分类分组查询所有照片
-   */
-  async groupPhotosByCategory(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const current = parseInt(req.query.current as string, 10) || 1;
-      const size = parseInt(req.query.size as string, 10) || 10;
-      const sortBy = (req.query.sortBy as string) || 'name';
-      const sortOrder = (req.query.sortOrder as 'ASC' | 'DESC') || 'DESC';
-      const status = (req.query.status as string) || 'published';
-      const search = req.query.search as string;
-      const subject = (req.query.subject as string) || 'photo';
-
-      let categoryIds: number[] | undefined;
-      let categorySlugs: string[] | undefined;
-
-      if (req.query.categoryIds) {
-        categoryIds = (req.query.categoryIds as string).split(',').map(id => parseInt(id, 10));
-      }
-      if (req.query.categorySlugs) {
-        categorySlugs = (req.query.categorySlugs as string).split(',');
-      }
-
-      const { records, total, safeSize } = await BlogService.groupPhotosByCategory({
-        current,
-        size,
-        sortBy,
-        sortOrder,
-        ids: categoryIds,
-        slugs: categorySlugs,
-        search,
-        status,
-        subject,
-      });
-
-      res.json(
-        ResponseFactory.page(records, { total, current, size: safeSize }, `成功获取分类分组的照片`)
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 获取分类下的所有照片
-   */
-  async getPhotosByCategory(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const categoryId = parseInt(req.params.categoryId as string, 10);
-      if (isNaN(categoryId)) {
-        throw new AppError('无效的分类ID', 400);
-      }
-
-      const current = parseInt(req.query.current as string, 10) || 1;
-      const size = parseInt(req.query.size as string, 10) || 20;
-      const status = (req.query.status as string) || 'published';
-      const subject = (req.query.subject as string) || 'photo';
-
-      const { photos, total, category } = await BlogService.getPhotosByCategory(categoryId, {
-        current,
-        size,
-        status,
-        subject,
-      });
-
-      if (!category) {
-        throw new AppError('分类不存在', 404);
-      }
-      const firstPhoto = photos[0] || { url: '', thumbnailUrl: '' };
-      const data: Album = {
-        id: category.id,
-        name: category.name,
-        description: category.description || '暂无描述',
-        coverUrl: firstPhoto.url,
-        coverThumbnail: firstPhoto.thumbnailUrl,
-        isPublic: true,
-        photos: photos,
-        photoCount: photos.length,
-        createdAt: category.createdAt,
-        updatedAt: category.updatedAt,
-      };
-      res.json(ResponseFactory.pageAlbum(data, { current, size, total }, '成功获取分类下的照片'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * 获取博客归档数据
    */
   async getArchive(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -697,7 +480,7 @@ class BlogApi {
       const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 3;
       const status = (req.query.status as string) || 'published';
-      const subject = (req.query.subject as string) || 'article';
+      const subject = (req.query.subject as string) || Constance.DEFAULT_SUBJECT;
 
       const result = await BlogService.getArchive({
         year,
@@ -724,7 +507,7 @@ class BlogApi {
       const endYear = req.query.endYear ? parseInt(req.query.endYear as string, 10) : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 2;
       const status = (req.query.status as string) || 'published';
-      const subject = (req.query.subject as string) || 'article';
+      const subject = (req.query.subject as string) || Constance.DEFAULT_SUBJECT;
 
       const result = await BlogService.getArchiveByYears({
         startYear,
@@ -739,7 +522,6 @@ class BlogApi {
       next(error);
     }
   }
-
 }
 
 export default BlogApi;
