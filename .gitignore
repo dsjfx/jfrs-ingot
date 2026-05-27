@@ -62,7 +62,7 @@ typings/
 # next.js build output
 .next
 
-.map
+*.map
 
 db/
 uploads/
