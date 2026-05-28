@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import assistRoutes from './assist'; // 导入 assist 路由
 import authRoutes from './auth';
 import blogRoutes from './blogs';
-import photoRoutes from './photos';
-import categoryRoutes from './categories';
-import tagRoutes from './tags';
-import commentRoutes from './comments';
 import captchaRoutes from './captcha';
+import categoryRoutes from './categories';
+import commentRoutes from './comments';
+import photoRoutes from './photos';
+import tagRoutes from './tags';
 import uploadRoutes from './upload';
 
 const router: Router = Router();
@@ -22,6 +23,7 @@ router.use(`${API_PREFIX}/comment`, commentRoutes);
 router.use(`${API_PREFIX}/captcha`, captchaRoutes);
 router.use(`${API_PREFIX}/upload`, uploadRoutes);
 router.use(`${API_PREFIX}/photos`, photoRoutes);
+router.use(`${API_PREFIX}/assist`, assistRoutes); // 添加 assist 路由
 
 // API 根路径
 router.get(API_PREFIX, (_req, res) => {

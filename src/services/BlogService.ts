@@ -329,8 +329,8 @@ class BlogService {
         where,
         include: [
           { model: User, as: 'author', attributes: ['id', 'username', 'nickname', 'avatar'] },
-          { model: Category, as: 'category', attributes: ['id', 'name'] },
-          { model: Tag, as: 'tags', attributes: ['id', 'name'] },
+          { model: Category, as: 'category', attributes: ['id', 'name', 'blogCount'] },
+          { model: Tag, as: 'tags', attributes: ['id', 'name', 'blogCount'] },
         ],
         distinct: true,
         offset,
