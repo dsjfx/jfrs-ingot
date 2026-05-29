@@ -1,5 +1,5 @@
 import { CountOptions, Op, QueryTypes, Sequelize, Transaction } from 'sequelize';
-import { Blog, Category, Photo, sequelize, Tag, User } from '@/models';
+import { Blog, Category, Photo, sequelize, Tag, User } from '../models';
 import { AppError } from '../middleware/errorHandler';
 import { PhotoData, PhotoGroupParam, PhotoGroupResult } from '../types/photo';
 import { BlogQueryParams } from '@/types/blog';
