@@ -3,8 +3,8 @@ import Joi from 'joi';
 import PhotoService from '../services/PhotoService';
 import { AppError } from '../middleware/errorHandler';
 import { ResponseFactory } from '../utils/ResponseFactory';
-import { Album } from '@/types/photo';
-import Constance from '@/utils/Constance';
+import { Album } from '../types/photo';
+import Constance from '../utils/Constance';
 
 class PhotoApi {
   static querySchema = Joi.object({
