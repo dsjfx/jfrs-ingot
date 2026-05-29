@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import AssistApi from '@/api/AssistApi';
+import AssistApi from '../api/AssistApi';
 
 const router: Router = Router();
 

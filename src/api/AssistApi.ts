@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import subjectsHelper from '@/utils/subjectsHelper';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import subjectsHelper from '../utils/subjectsHelper';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class AssistApi {
   // 获取科目下拉选项
