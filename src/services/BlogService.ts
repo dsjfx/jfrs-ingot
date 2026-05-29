@@ -17,7 +17,7 @@ import { WhereOptions, QueryTypes } from 'sequelize';
 import { generateRandomOffsets, getMonthName } from '../utils/FuncUtil';
 import { PhotoData } from '../types/photo';
 import PhotoService from './PhotoService';
-import Constance from '@/utils/Constance';
+import Constance from '../utils/Constance';
 
 class BlogService {
   /**
