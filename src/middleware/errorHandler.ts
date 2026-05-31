@@ -112,6 +112,7 @@ export const errorHandler = (
     path: req.path,
     method: req.method,
     ip: req.ip,
+    msg: err.message,
   });
 
   // 响应错误

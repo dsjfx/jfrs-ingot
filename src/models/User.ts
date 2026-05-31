@@ -1,7 +1,7 @@
 import { Table, Column, Model, DataType, HasMany, BeforeCreate } from 'sequelize-typescript';
 import bcrypt from 'bcryptjs';
 import Blog from './Blog';
-import { EUserRole } from '../core/Enumers';
+import { EUserGender, EUserRole, EUserStatus } from '../core/Enumers';
 import { UserProfile } from '../types';
 
 @Table({
@@ -43,10 +43,10 @@ class User extends Model {
   password!: string;
 
   @Column({
-    type: DataType.ENUM('active', 'inactive', 'banned', 'pending'),
-    defaultValue: 'pending',
+    type: DataType.ENUM(...Object.values(EUserStatus)),
+    defaultValue: EUserStatus.PENDING,
   })
-  status!: string;
+  status!: `${EUserStatus}`;
 
   @Column({
     type: DataType.STRING(100),
@@ -59,8 +59,8 @@ class User extends Model {
   email!: string;
 
   @Column({
-    type: DataType.ENUM('admin', 'editor', 'visitor', 'user'),
-    defaultValue: 'visitor',
+    type: DataType.ENUM(...Object.values(EUserRole)),
+    defaultValue: EUserRole.VISITOR,
   })
   role!: `${EUserRole}`;
 
@@ -80,10 +80,10 @@ class User extends Model {
   phone?: string;
 
   @Column({
-    type: DataType.ENUM('male', 'female', 'secret'),
-    defaultValue: 'secret',
+    type: DataType.ENUM(...Object.values(EUserGender)),
+    defaultValue: EUserGender.SECRET,
   })
-  gender?: string;
+  gender?: `${EUserGender}`;
 
   @Column({
     type: DataType.DATEONLY,

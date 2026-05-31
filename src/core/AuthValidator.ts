@@ -32,8 +32,8 @@ export const registerSchema = Joi.object({
     'any.required': '请确认密码',
   }),
 
-  role: Joi.string().valid('admin', 'editor', 'viewer').default('viewer').messages({
-    'any.only': '角色只能是 admin, editor 或 viewer',
+  role: Joi.string().valid('admin', 'author', 'user', 'visitor').default('visitor').messages({
+    'any.only': '角色只能是 admin, author, user 或 visitor',
   }),
 
   avatar: Joi.string().uri().optional().messages({

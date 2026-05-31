@@ -6,6 +6,21 @@ export enum EUserRole {
   ADMIN = 'admin', // 管理员
 }
 
+// 用户状态
+export enum EUserStatus {
+  ACTIVE = 'active', // 活跃
+  INACTIVE = 'inactive', // 不活跃
+  BANNED = 'banned', // 禁止访问
+  PENDING = 'pending', // 待审核
+}
+
+// 用户性别
+export enum EUserGender {
+  MALE = 'male',
+  FEMALE = 'female',
+  SECRET = 'secret',
+}
+
 // 应用类型
 export enum EAppType {
   BLOG = 'blog', // 博客前端

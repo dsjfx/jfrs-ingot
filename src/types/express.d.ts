@@ -16,7 +16,7 @@ declare global {
         id: number;
         username: string;
         email: string;
-        role: 'admin' | 'editor' | 'viewer'
+        role: 'admin' | 'author' | 'user' | 'visitor'
       }
       | JwtPayload;
 
