@@ -72,12 +72,32 @@ class AuthApi {
       // let avatar = null;
 
       // 调用服务
-      const { avatar, icpLicense, publicSecurityLicense } = await AuthService.getUserProfile(userId);
+      const { avatar, icpLicense, publicSecurityLicense } =
+        await AuthService.getUserProfile(userId);
       // if (user && user.avatar) {
       //   avatar = user.avatar;
       // }
 
-      res.json(ResponseFactory.success({ avatar, icpLicense, publicSecurityLicense }, '获取用户头像成功'));
+      res.json(
+        ResponseFactory.success({ avatar, icpLicense, publicSecurityLicense }, '获取用户头像成功')
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getSystemAvatar(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // 管理员的userid
+      const userId = 1;
+
+      // 调用服务
+      const { avatar, icpLicense, publicSecurityLicense } =
+        await AuthService.getUserProfile(userId);
+
+      res.json(
+        ResponseFactory.success({ avatar, icpLicense, publicSecurityLicense }, '获取用户头像成功')
+      );
     } catch (error) {
       next(error);
     }

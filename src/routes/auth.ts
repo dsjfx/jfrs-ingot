@@ -20,6 +20,8 @@ router.post('/login', rateLimit({ max: 5 }), authApi.login);
 
 router.get('/avatar', authApi.getUserAvatar);
 
+router.get('/sys-avatar', authApi.getSystemAvatar);
+
 /**
  * 获取当前用户信息
  */

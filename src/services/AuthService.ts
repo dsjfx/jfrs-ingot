@@ -42,7 +42,6 @@ class AuthService {
 
       // 3. 密码加密
       const hashedPassword = await bcrypt.hash(data.password, 10);
-      console.log('---------------------------------------', data.role);
       // 4. 创建用户
       const user = await User.create(
         {

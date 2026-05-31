@@ -37,7 +37,7 @@ router.get(API_PREFIX, (_req, res) => {
       tags: `${API_PREFIX}/tags`,
       comments: `${API_PREFIX}/comments`,
     },
-    documentation: '/api/v1/docs', // 可以添加文档链接
+    documentation: `${API_PREFIX}/docs`, // 可以添加文档链接
   });
 });
 
