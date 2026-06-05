@@ -329,8 +329,8 @@ class BlogService {
         where,
         include: [
           { model: User, as: 'author', attributes: ['id', 'username', 'nickname', 'avatar'] },
-          { model: Category, as: 'category', attributes: ['id', 'name', 'blogCount'] },
-          { model: Tag, as: 'tags', attributes: ['id', 'name', 'blogCount'] },
+          { model: Category, as: 'category', attributes: ['id', 'name', 'color', 'blogCount'] },
+          { model: Tag, as: 'tags', attributes: ['id', 'name', 'color', 'blogCount'] },
         ],
         distinct: true,
         offset,
@@ -543,7 +543,7 @@ class BlogService {
       const relatedBlogs = await Blog.findAll({
         where: {
           subject,
-          [Op.or]: whereConditions,
+          [Op.and]: whereConditions,
         },
         include: [
           {

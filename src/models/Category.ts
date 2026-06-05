@@ -30,6 +30,12 @@ class Category extends Model {
   slug!: string;
 
   @Column({
+    type: DataType.STRING(100),
+    allowNull: true,
+  })
+  color!: string;
+
+  @Column({
     type: DataType.INTEGER,
     allowNull: true,
   })
