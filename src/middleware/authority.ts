@@ -45,7 +45,6 @@ export const authenticateToken: RequestHandler = async (req, _res, next) => {
 
     next();
   } catch (error) {
-    console.log(error)
     if (error instanceof jwt.TokenExpiredError) {
       logger.warn('Token 已过期');
       next(new AppError('认证令牌已过期，请重新登录', 401));
