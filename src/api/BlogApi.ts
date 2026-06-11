@@ -22,7 +22,7 @@ class BlogApi {
       .items(
         Joi.object({
           filename: Joi.string().required(),
-          path: Joi.string().required(),
+          // path: Joi.string().required(),
           url: Joi.string().required(),
           originalname: Joi.string().required(),
           mimetype: Joi.string().required(),
@@ -30,7 +30,7 @@ class BlogApi {
           width: Joi.number().optional(),
           height: Joi.number().optional(),
           thumbnailFilename: Joi.string().optional(),
-          thumbnailPath: Joi.string().optional(),
+          // thumbnailPath: Joi.string().optional(),
           thumbnailUrl: Joi.string().optional(),
           thumbnailSize: Joi.number().optional(),
           isCover: Joi.boolean().default(false),

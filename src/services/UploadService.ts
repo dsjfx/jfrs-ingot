@@ -22,13 +22,13 @@ interface UploadOptions {
 export interface UploadResult {
   filename: string;
   originalname: string;
-  path: string;
+  path?: string;
   url: string;
   size: number;
   mimetype: string;
   thumbnail?: {
     filename: string;
-    path: string;
+    path?: string;
     url: string;
     size: number;
   };
@@ -38,9 +38,21 @@ export interface UploadResult {
   };
 }
 
+const getUploadPath = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    // 生产环境：可以存到系统临时目录或独立数据目录
+    return process.env.UPLOAD_PATH || '/home/ubuntu/uploads';
+  } else {
+    // 开发环境：项目目录下的文件夹
+    return path.join(__dirname, '../../uploads');
+  }
+};
+
 // 默认配置
 const defaultOptions: UploadOptions = {
-  destination: path.join(__dirname, '../../uploads'),
+  destination: getUploadPath(),
   maxSize: 5 * 1024 * 1024, // 5MB
   allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
   createThumbnail: true,
@@ -58,7 +70,7 @@ class UploadService {
     this.ensureUploadDir();
 
     // 基础URL（用于生成访问链接）
-    this.baseUrl = process.env.UPLOAD_BASE_URL || 'http://localhost:3000/uploads';
+    this.baseUrl = process.env.UPLOAD_BASE_URL || 'http://localhost:4000/uploads';
   }
 
   static getInstance(): UploadService {
@@ -230,7 +242,7 @@ class UploadService {
       const result: UploadResult = {
         filename,
         originalname: file.originalname,
-        path: filePath,
+        // path: filePath,
         url: this.getFileUrl(filename),
         size: file.size,
         mimetype: file.mimetype,
@@ -250,7 +262,7 @@ class UploadService {
 
           result.thumbnail = {
             filename: thumbnailFilename,
-            path: thumbnailPath,
+            // path: thumbnailPath,
             url: this.getFileUrl(thumbnailFilename, true),
             size: thumbnail.length,
           };

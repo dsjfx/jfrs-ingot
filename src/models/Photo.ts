@@ -25,7 +25,7 @@ class Photo extends Model {
 
   @Column({
     type: DataType.STRING(500),
-    allowNull: false,
+    allowNull: true,
     comment: '文件路径',
   })
   path!: string;
