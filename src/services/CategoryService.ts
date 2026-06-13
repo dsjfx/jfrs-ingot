@@ -39,12 +39,12 @@ class CategoryService {
    * 获取分类列表
    */
   async getCategories(
-    page: number = 1,
-    limit: number = 20,
+    current: number = 1,
+    size: number = 20,
     filters: CategoryFilters = {}
   ): Promise<{ categories: Category[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
       const where: any = {};
 
       if (filters.search) {
@@ -54,13 +54,75 @@ class CategoryService {
       const { rows: categories, count: total } = await Category.findAndCountAll({
         where,
         offset,
-        limit,
+        limit: size,
         order: [['sort', 'ASC']],
       });
 
       return { categories, total };
     } catch (error) {
       logger.error('获取分类列表失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取所有分类（不分页）
+   * @param options - 查询选项
+   * @returns 分类列表
+   */
+  async getAllCategories(
+    options: {
+      sortBy?: string; // 排序字段
+      sortOrder?: 'ASC' | 'DESC'; // 排序方向
+    } = {}
+  ): Promise<Category[]> {
+    try {
+      const { sortBy = 'name', sortOrder = 'ASC' } = options;
+
+      const where: any = {};
+
+      const categories = await Category.findAll({
+        where,
+        order: [[sortBy, sortOrder]],
+        attributes: ['id', 'name', 'slug', 'description', 'blogCount', 'parentId'],
+      });
+
+      logger.info(`获取所有分类成功，共 ${categories.length} 条`);
+      return categories;
+    } catch (error) {
+      logger.error('获取所有分类失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取分类树（层级结构）
+   */
+  async getCategoryTree(): Promise<any[]> {
+    try {
+      const categories = await this.getAllCategories();
+
+      // 构建树形结构
+      const categoryMap = new Map();
+      const roots: any[] = [];
+
+      categories.forEach(category => {
+        const item = category.toJSON();
+        categoryMap.set(item.id, { ...item, children: [] });
+      });
+
+      categories.forEach(category => {
+        const item = categoryMap.get(category.id);
+        if (category.parentId && categoryMap.has(category.parentId)) {
+          categoryMap.get(category.parentId).children.push(item);
+        } else {
+          roots.push(item);
+        }
+      });
+
+      return roots;
+    } catch (error) {
+      logger.error('获取分类树失败:', error);
       throw error;
     }
   }
@@ -151,8 +213,8 @@ class CategoryService {
    */
   async getCategoryBlogs(
     categoryId: number,
-    page: number = 1,
-    limit: number = 10
+    current: number = 1,
+    size: number = 10
   ): Promise<{ category: Category; blogs: Blog[]; total: number }> {
     try {
       const category = await Category.findByPk(categoryId, {
@@ -178,7 +240,7 @@ class CategoryService {
       }
 
       // 获取博客列表（带分页）
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: blogs, count: total } = await Blog.findAndCountAll({
         where: {
@@ -193,7 +255,7 @@ class CategoryService {
           },
         ],
         offset,
-        limit,
+        limit: size,
         order: [['createdAt', 'DESC']],
       });
 
@@ -247,11 +309,11 @@ class CategoryService {
    */
   async searchCategories(
     keyword: string,
-    page: number = 1,
-    limit: number = 20
+    current: number = 1,
+    size: number = 20
   ): Promise<{ categories: Category[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: categories, count: total } = await Category.findAndCountAll({
         where: {
@@ -261,7 +323,7 @@ class CategoryService {
           ],
         },
         offset,
-        limit,
+        limit: size,
         order: [['name', 'ASC']],
       });
 
@@ -275,14 +337,11 @@ class CategoryService {
   /**
    * 获取热门分类（按博客数量排序）
    */
-  async getPopularCategories(limit: number = 10): Promise<Category[]> {
+  async getPopularCategories(size: number = 10): Promise<Category[]> {
     try {
-      const categories = await Category.findAll({
-        order: [['blogCount', 'DESC']],
-        limit,
-      });
-
-      return categories;
+      return await this.getAllCategories({ sortBy: 'blogCount', sortOrder: 'DESC' }).then(tags =>
+        tags.slice(0, size)
+      );
     } catch (error) {
       logger.error('获取热门分类失败:', error);
       throw error;

@@ -8,7 +8,7 @@ const router: Router = Router();
 const categoryAPi = new CategoryApi();
 
 // 公共路由
-router.get('/list', categoryAPi.getCategories);
+router.get('/list', categoryAPi.getAllCategories);
 router.get('/popular', categoryAPi.getPopularCategories);
 router.get('/search', categoryAPi.searchCategories);
 router.get('/:id', categoryAPi.getCategoryById);

@@ -23,7 +23,7 @@ class CategoryApi {
     size: Joi.number().integer().min(1).max(100).default(20),
     search: Joi.string().max(50).empty('').optional(),
     sortBy: Joi.string().valid('name', 'blogCount', 'createdAt').default('name'),
-    sortOrder: Joi.string().valid('ASC', 'DESC').default('ASC'),
+    sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC'),
   }).unknown(true);
 
   /**
@@ -35,11 +35,6 @@ class CategoryApi {
 
       logger.info(`分类创建成功: ${category.name}`);
 
-      // res.status(201).json({
-      //   success: true,
-      //   data: category,
-      //   message: '分类创建成功',
-      // });
       res.json(ResponseFactory.success(category, '分类创建成功'));
     } catch (error) {
       next(error);
@@ -68,6 +63,37 @@ class CategoryApi {
   }
 
   /**
+   * 获取所有分类（不分页）
+   */
+  async getAllCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sortBy, sortOrder } = req.query;
+
+      const categories = await CategoryService.getAllCategories({
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as 'ASC' | 'DESC',
+      });
+
+      res.json(ResponseFactory.success(categories, '获取分类列表成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取分类树
+   */
+  async getCategoryTree(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tree = await CategoryService.getCategoryTree();
+
+      res.json(ResponseFactory.success(tree, '获取分类树成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 获取分类详情
    */
   async getCategoryById(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -79,10 +105,6 @@ class CategoryApi {
 
       const category = await CategoryService.getCategoryById(id);
 
-      // res.json({
-      //   success: true,
-      //   data: category,
-      // });
       res.json(ResponseFactory.success(category, '查询分类详情成功'));
     } catch (error) {
       next(error);
@@ -103,11 +125,6 @@ class CategoryApi {
 
       logger.info(`分类更新成功: ${category.name}`);
 
-      // res.json({
-      //   success: true,
-      //   data: category,
-      //   message: '分类更新成功',
-      // });
       res.json(ResponseFactory.success(category, '分类更新成功'));
     } catch (error) {
       next(error);
@@ -128,10 +145,6 @@ class CategoryApi {
 
       logger.info(`分类删除成功: ID=${id}`);
 
-      // res.json({
-      //   success: true,
-      //   message: '分类删除成功',
-      // });
       res.json(ResponseFactory.success(id, '分类删除成功'));
     } catch (error) {
       next(error);
@@ -148,34 +161,12 @@ class CategoryApi {
         throw new AppError('无效的分类ID', 400);
       }
 
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 10;
 
-      const result = await CategoryService.getCategoryBlogs(id, page, limit);
+      const { blogs, total } = await CategoryService.getCategoryBlogs(id, current, size);
 
-      // res.json({
-      //   success: true,
-      //   data: {
-      //     category: result.category,
-      //     blogs: result.blogs,
-      //     pagination: {
-      //       page,
-      //       limit,
-      //       total: result.total,
-      //       totalPages: Math.ceil(result.total / limit),
-      //     },
-      //   },
-      // });
-      res.json(ResponseFactory.success({
-        category: result.category,
-        blogs: result.blogs,
-        pagination: {
-          page,
-          limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / limit),
-        },
-      }, '查询该分类相关的博客成功'));
+      res.json(ResponseFactory.page(blogs, { current, size, total }, '查询该分类相关的博客成功'));
     } catch (error) {
       next(error);
     }
@@ -194,10 +185,6 @@ class CategoryApi {
 
       const stats = await CategoryService.getCategoryStats();
 
-      // res.json({
-      //   success: true,
-      //   data: stats,
-      // });
       res.json(ResponseFactory.success(stats, '查询分类统计数据成功'));
     } catch (error) {
       next(error);
@@ -209,38 +196,23 @@ class CategoryApi {
    */
   async searchCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { keyword, page = 1, limit = 20 } = req.query;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 20;
+      const keyword = req.query.keyword;
 
       if (!keyword || typeof keyword !== 'string') {
         throw new AppError('请提供搜索关键词', 400);
       }
 
-      const pageNum = parseInt(page as string, 10) || 1;
-      const limitNum = parseInt(limit as string, 10) || 20;
+      const { categories, total } = await CategoryService.searchCategories(
+        keyword as string,
+        current,
+        size
+      );
 
-      const result = await CategoryService.searchCategories(keyword as string, pageNum, limitNum);
-
-      // res.json({
-      //   success: true,
-      //   data: {
-      //     categories: result.categories,
-      //     pagination: {
-      //       page: pageNum,
-      //       limit: limitNum,
-      //       total: result.total,
-      //       totalPages: Math.ceil(result.total / limitNum),
-      //     },
-      //   },
-      // });
-      res.json(ResponseFactory.success({
-        categories: result.categories,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: result.total,
-          totalPages: Math.ceil(result.total / limitNum),
-        },
-      }, '根据关键字查询分类成功'));
+      res.json(
+        ResponseFactory.page(categories, { current, size, total }, '根据关键字查询分类成功')
+      );
     } catch (error) {
       next(error);
     }
@@ -251,14 +223,10 @@ class CategoryApi {
    */
   async getPopularCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const size = parseInt(req.query.size as string, 10) || 10;
 
-      const categories = await CategoryService.getPopularCategories(limit);
+      const categories = await CategoryService.getPopularCategories(size);
 
-      // res.json({
-      //   success: true,
-      //   data: categories,
-      // });
       res.json(ResponseFactory.success(categories, '查询热门分类成功'));
     } catch (error) {
       next(error);

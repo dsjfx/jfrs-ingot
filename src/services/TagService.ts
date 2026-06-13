@@ -39,12 +39,12 @@ class TagService {
    * 获取标签列表
    */
   async getTags(
-    page: number = 1,
-    limit: number = 20,
+    current: number = 1,
+    size: number = 20,
     filters: TagFilters = {}
   ): Promise<{ tags: Tag[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
       const where: any = {};
 
       if (filters.keyword) {
@@ -54,13 +54,37 @@ class TagService {
       const { rows: tags, count: total } = await Tag.findAndCountAll({
         where,
         offset,
-        limit,
+        limit: size,
         order: [['name', 'ASC']],
       });
 
       return { tags, total };
     } catch (error) {
       logger.error('获取标签列表失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取所有标签（不分页）
+   * @param options - 查询选项
+   * @returns 标签列表
+   */
+  async getAllTags(options: { sortBy?: string; sortOrder?: 'ASC' | 'DESC' } = {}): Promise<Tag[]> {
+    try {
+      const { sortBy = 'name', sortOrder = 'ASC' } = options;
+      const where: any = {};
+
+      const tags = await Tag.findAll({
+        where,
+        order: [[sortBy, sortOrder]],
+        attributes: ['id', 'name', 'slug', 'description', 'blogCount'],
+      });
+
+      logger.info(`获取所有标签成功，共 ${tags.length} 条`);
+      return tags;
+    } catch (error) {
+      logger.error('获取所有标签失败:', error);
       throw error;
     }
   }
@@ -160,8 +184,8 @@ class TagService {
    */
   async getTagBlogs(
     tagId: number,
-    page: number = 1,
-    limit: number = 10
+    current: number = 1,
+    size: number = 10
   ): Promise<{ tag: Tag; blogs: Blog[]; total: number }> {
     try {
       const tag = await Tag.findByPk(tagId);
@@ -171,7 +195,7 @@ class TagService {
       }
 
       // 获取博客列表（带分页）
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: blogs, count: total } = await Blog.findAndCountAll({
         include: [
@@ -190,7 +214,7 @@ class TagService {
           status: 'published',
         },
         offset,
-        limit,
+        limit: size,
         order: [['createdAt', 'DESC']],
       });
 
@@ -244,11 +268,11 @@ class TagService {
    */
   async searchTags(
     keyword: string,
-    page: number = 1,
-    limit: number = 20
+    current: number = 1,
+    size: number = 20
   ): Promise<{ tags: Tag[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: tags, count: total } = await Tag.findAndCountAll({
         where: {
@@ -258,7 +282,7 @@ class TagService {
           ],
         },
         offset,
-        limit,
+        limit: size,
         order: [['name', 'ASC']],
       });
 
@@ -272,14 +296,11 @@ class TagService {
   /**
    * 获取热门标签（按博客数量排序）
    */
-  async getPopularTags(limit: number = 20): Promise<Tag[]> {
+  async getPopularTags(size: number = 20): Promise<Tag[]> {
     try {
-      const tags = await Tag.findAll({
-        order: [['blogCount', 'DESC']],
-        limit,
-      });
-
-      return tags;
+      return await this.getAllTags({ sortBy: 'blogCount', sortOrder: 'DESC' }).then(tags =>
+        tags.slice(0, size)
+      );
     } catch (error) {
       logger.error('获取热门标签失败:', error);
       throw error;

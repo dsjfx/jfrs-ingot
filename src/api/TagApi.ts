@@ -19,8 +19,8 @@ class TagApi {
   });
 
   static querySchema = Joi.object({
-    page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(20),
+    current: Joi.number().integer().min(1).default(1),
+    size: Joi.number().integer().min(1).max(100).default(20),
     search: Joi.string().max(30).empty('').optional(),
     sortBy: Joi.string().valid('name', 'blogCount', 'createdAt').default('name'),
     sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC'),
@@ -47,11 +47,6 @@ class TagApi {
 
       logger.info(`标签创建成功: ${tag.name}`);
 
-      // res.status(201).json({
-      //   success: true,
-      //   data: tag,
-      //   message: '标签创建成功',
-      // });
       res.json(ResponseFactory.success(tag, '标签创建成功'));
     } catch (error) {
       next(error);
@@ -69,40 +64,29 @@ class TagApi {
         throw new AppError(error.details[0].message, 400);
       }
 
-      const { page, limit, ...filters } = value;
+      const { current, size, ...filters } = value;
 
-      const result = await TagService.getTags(page, limit, filters);
+      const { tags, total } = await TagService.getTags(current, size, filters);
 
-      // res.json({
-      //   success: true,
-      //   data: {
-      //     tags: result.tags,
-      //     pagination: {
-      //       page,
-      //       limit,
-      //       total: result.total,
-      //       totalPages: Math.ceil(result.total / limit),
-      //       hasNext: page * limit < result.total,
-      //       hasPrev: page > 1,
-      //     },
-      //   },
-      // });
-      res.json(
-        ResponseFactory.success(
-          {
-            tags: result.tags,
-            pagination: {
-              page,
-              limit,
-              total: result.total,
-              totalPages: Math.ceil(result.total / limit),
-              hasNext: page * limit < result.total,
-              hasPrev: page > 1,
-            },
-          },
-          '标签查询成功'
-        )
-      );
+      res.json(ResponseFactory.page(tags, { current, size, total }, '标签查询成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取所有标签（不分页）
+   */
+  async getAllTags(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sortBy, sortOrder } = req.query;
+
+      const tags = await TagService.getAllTags({
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as 'ASC' | 'DESC',
+      });
+
+      res.json(ResponseFactory.success(tags, '获取标签列表成功'));
     } catch (error) {
       next(error);
     }
@@ -120,10 +104,6 @@ class TagApi {
 
       const tag = await TagService.getTagById(id);
 
-      // res.json({
-      //   success: true,
-      //   data: tag,
-      // });
       res.json(ResponseFactory.success(tag, '标签获取成功'));
     } catch (error) {
       next(error);
@@ -144,11 +124,6 @@ class TagApi {
 
       logger.info(`标签更新成功: ${tag.name}`);
 
-      // res.json({
-      //   success: true,
-      //   data: tag,
-      //   message: '标签更新成功',
-      // });
       res.json(ResponseFactory.success(tag, '标签更新成功'));
     } catch (error) {
       next(error);
@@ -169,10 +144,6 @@ class TagApi {
 
       logger.info(`标签删除成功: ID=${id}`);
 
-      // res.json({
-      //   success: true,
-      //   message: '标签删除成功',
-      // });
       res.json(ResponseFactory.success(id, '标签删除成功'));
     } catch (error) {
       next(error);
@@ -189,39 +160,12 @@ class TagApi {
         throw new AppError('无效的标签ID', 400);
       }
 
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 10;
 
-      const result = await TagService.getTagBlogs(id, page, limit);
+      const { blogs, total } = await TagService.getTagBlogs(id, current, size);
 
-      // res.json({
-      //   success: true,
-      //   data: {
-      //     tag: result.tag,
-      //     blogs: result.blogs,
-      //     pagination: {
-      //       page,
-      //       limit,
-      //       total: result.total,
-      //       totalPages: Math.ceil(result.total / limit),
-      //     },
-      //   },
-      // });
-      res.json(
-        ResponseFactory.success({
-          success: true,
-          data: {
-            tag: result.tag,
-            blogs: result.blogs,
-            pagination: {
-              page,
-              limit,
-              total: result.total,
-              totalPages: Math.ceil(result.total / limit),
-            },
-          },
-        })
-      );
+      res.json(ResponseFactory.page(blogs, { current, size, total }, '获取标签的博客成功'));
     } catch (error) {
       next(error);
     }
@@ -240,10 +184,6 @@ class TagApi {
 
       const stats = await TagService.getTagStats();
 
-      // res.json({
-      //   success: true,
-      //   data: stats,
-      // });
       res.json(ResponseFactory.success(stats));
     } catch (error) {
       next(error);
@@ -255,40 +195,17 @@ class TagApi {
    */
   async searchTags(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { keyword, page = 1, limit = 20 } = req.query;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 20;
+      const keyword = req.query.keyword;
 
       if (!keyword || typeof keyword !== 'string') {
         throw new AppError('请提供搜索关键词', 400);
       }
 
-      const pageNum = parseInt(page as string, 10) || 1;
-      const limitNum = parseInt(limit as string, 10) || 20;
+      const { tags, total } = await TagService.searchTags(keyword as string, current, size);
 
-      const result = await TagService.searchTags(keyword as string, pageNum, limitNum);
-
-      // res.json({
-      //   success: true,
-      //   data: {
-      //     tags: result.tags,
-      //     pagination: {
-      //       page: pageNum,
-      //       limit: limitNum,
-      //       total: result.total,
-      //       totalPages: Math.ceil(result.total / limitNum),
-      //     },
-      //   },
-      // });
-      res.json(
-        ResponseFactory.success({
-          tags: result.tags,
-          pagination: {
-            page: pageNum,
-            limit: limitNum,
-            total: result.total,
-            totalPages: Math.ceil(result.total / limitNum),
-          },
-        })
-      );
+      res.json(ResponseFactory.page(tags, { current, size, total }, '标签搜索成功'));
     } catch (error) {
       next(error);
     }
@@ -299,14 +216,10 @@ class TagApi {
    */
   async getPopularTags(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const size = parseInt(req.query.size as string, 10) || 20;
 
-      const tags = await TagService.getPopularTags(limit);
+      const tags = await TagService.getPopularTags(size);
 
-      // res.json({
-      //   success: true,
-      //   data: tags,
-      // });
       res.json(ResponseFactory.success(tags));
     } catch (error) {
       next(error);
@@ -332,11 +245,6 @@ class TagApi {
 
       const createdTags = await TagService.bulkCreateTags(tags);
 
-      // res.json({
-      //   success: true,
-      //   data: createdTags,
-      //   message: `成功创建 ${createdTags.length} 个标签`,
-      // });
       res.json(ResponseFactory.success(createdTags, `成功创建 ${createdTags.length} 个标签`));
     } catch (error) {
       next(error);
