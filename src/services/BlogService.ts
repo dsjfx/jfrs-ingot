@@ -802,12 +802,12 @@ class BlogService {
               {
                 model: Category,
                 as: 'category',
-                attributes: ['id', 'name', 'slug'],
+                attributes: ['id', 'name', 'slug', 'color'],
               },
               {
                 model: Tag,
                 as: 'tags',
-                attributes: ['id', 'name', 'slug'],
+                attributes: ['id', 'name', 'slug', 'color'],
                 through: { attributes: [] },
               },
             ],
