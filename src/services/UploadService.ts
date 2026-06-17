@@ -84,11 +84,8 @@ class UploadService {
    * 确保上传目录存在
    */
   private async ensureUploadDir(): Promise<void> {
-    const dirs = [
-      defaultOptions.destination!,
-      path.join(defaultOptions.destination!, 'thumbnails'),
-      path.join(defaultOptions.destination!, 'temp'),
-    ];
+    const base = defaultOptions.destination!;
+    const dirs = [base, path.join(base, 'temp')];
 
     for (const dir of dirs) {
       try {
@@ -113,9 +110,10 @@ class UploadService {
   /**
    * 获取文件访问URL
    */
-  private getFileUrl(filename: string, isThumbnail: boolean = false): string {
-    const subPath = isThumbnail ? 'thumbnails' : '';
-    return subPath ? `${this.baseUrl}/${subPath}/${filename}` : `${this.baseUrl}/${filename}`;
+  private getFileUrl(filename: string, subPath: string = '', isThumbnail: boolean = false): string {
+    const prefix = subPath ? `${subPath}/` : '';
+    const thumb = isThumbnail ? `thumbnails/` : '';
+    return `${this.baseUrl}/${prefix}${thumb}${filename}`;
   }
 
   /**
@@ -123,6 +121,43 @@ class UploadService {
    */
   private validateFileType(mimetype: string, allowedTypes: string[]): boolean {
     return allowedTypes.includes(mimetype);
+  }
+
+  /**
+   * 从 exif buffer 中尝试解析出 "YYYY:MM:DD HH:MM:SS" 格式的日期，若解析失败返回 null
+   */
+  private parseExifDate(exifBuffer?: Buffer): Date | null {
+    if (!exifBuffer) return null;
+    try {
+      const str = exifBuffer.toString('latin1');
+      const m = str.match(/\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}/);
+      if (m && m[0]) {
+        const d = m[0].replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+        return new Date(d.replace(' ', 'T'));
+      }
+    } catch (err) {
+      logger.debug('parseExifDate failed', err);
+    }
+    return null;
+  }
+
+  /**
+   * 获取图片的日期（优先 EXIF DateTimeOriginal，其次文件 birthtime，最后当前时间）
+   */
+  private async getImageDate(filePath: string): Promise<Date> {
+    try {
+      const image = sharp(filePath);
+      const metadata = await image.metadata();
+
+      const exifDate = this.parseExifDate(metadata.exif as Buffer | undefined);
+      if (exifDate) return exifDate;
+
+      const stats = await fs.stat(filePath);
+      if (stats.birthtimeMs && !isNaN(stats.birthtimeMs)) return stats.birthtime;
+    } catch (err) {
+      logger.debug('getImageDate: failed to read EXIF, fallback', err);
+    }
+    return new Date();
   }
 
   /**
@@ -233,7 +268,34 @@ class UploadService {
 
       // 生成文件名
       const filename = opts.fileName || this.generateFileName(file.originalname);
-      const filePath = path.join(opts.destination!, filename);
+
+      // 先确定目标子目录（year/month），仅对图片尝试读取 EXIF 获取日期
+      let targetSubPath = ''; // e.g., "2026/12"
+      try {
+        let date = new Date();
+        if (file.mimetype.startsWith('image/')) {
+          date = await this.getImageDate(file.path);
+        } else {
+          const stats = await fs.stat(file.path);
+          if (stats.birthtimeMs && !isNaN(stats.birthtimeMs)) date = stats.birthtime;
+        }
+        const year = date.getFullYear();
+        const month = `${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        targetSubPath = `${year}/${month}`;
+      } catch (err) {
+        logger.debug('确定目标子目录失败，使用默认目录', err);
+      }
+
+      // 创建目标目录（以及缩略图目录）
+      const destBase = opts.destination!;
+      const targetDir = path.join(destBase, targetSubPath);
+      const targetThumbDir = path.join(targetDir, 'thumbnails');
+
+      await fs.mkdir(targetDir, { recursive: true });
+      await fs.mkdir(targetThumbDir, { recursive: true });
+
+      // 最终文件路径
+      const filePath = path.join(targetDir, filename);
 
       // 移动文件到目标目录
       await fs.rename(file.path, filePath);
@@ -242,8 +304,8 @@ class UploadService {
       const result: UploadResult = {
         filename,
         originalname: file.originalname,
-        // path: filePath,
-        url: this.getFileUrl(filename),
+        path: targetSubPath ? path.posix.join(targetSubPath, filename) : filename,
+        url: this.getFileUrl(filename, targetSubPath),
         size: file.size,
         mimetype: file.mimetype,
       };
@@ -257,13 +319,17 @@ class UploadService {
         // 保存缩略图
         if (thumbnail) {
           const thumbnailFilename = `thumb_${filename}`;
-          const thumbnailPath = path.join(opts.destination!, 'thumbnails', thumbnailFilename);
+          const thumbnailPath = path.join(targetThumbDir, thumbnailFilename);
           await fs.writeFile(thumbnailPath, thumbnail);
+
+          const thumbnailRelPath = targetSubPath
+            ? path.posix.join(targetSubPath, 'thumbnails', thumbnailFilename)
+            : path.posix.join('thumbnails', thumbnailFilename);
 
           result.thumbnail = {
             filename: thumbnailFilename,
-            // path: thumbnailPath,
-            url: this.getFileUrl(thumbnailFilename, true),
+            path: thumbnailRelPath,
+            url: this.getFileUrl(thumbnailFilename, targetSubPath, true),
             size: thumbnail.length,
           };
         }
@@ -311,6 +377,58 @@ class UploadService {
     }
 
     return results;
+  }
+
+  /**
+   * 在 base uploads 下查找文件（支持两层目录：year/month）
+   * 返回匹配到的完整路径以及相对 subPath（用于生成 URL）
+   */
+  private async findFilePath(
+    filename: string
+  ): Promise<{ fullPath: string; subPath: string } | null> {
+    const base = defaultOptions.destination!;
+    // 先检查根目录
+    try {
+      const rootPath = path.join(base, filename);
+      await fs.access(rootPath);
+      return { fullPath: rootPath, subPath: '' };
+    } catch (err) {
+      logger.debug('check root access error', err);
+    }
+    try {
+      const years = await fs.readdir(base);
+      for (const year of years) {
+        const yearPath = path.join(base, year);
+        const statYear = await fs.stat(yearPath).catch(() => null);
+        if (!statYear || !statYear.isDirectory()) continue;
+        const months = await fs.readdir(yearPath);
+        for (const month of months) {
+          const monthPath = path.join(yearPath, month);
+          const statMonth = await fs.stat(monthPath).catch(() => null);
+          if (!statMonth || !statMonth.isDirectory()) continue;
+          const candidate = path.join(monthPath, filename);
+          try {
+            await fs.access(candidate);
+            const subPath = path.posix.join(year, month);
+            return { fullPath: candidate, subPath };
+          } catch (err) {
+            logger.debug('check candidate access error', err);
+          }
+          // also check thumbnails
+          const thumbCandidate = path.join(monthPath, 'thumbnails', `thumb_${filename}`);
+          try {
+            await fs.access(thumbCandidate);
+            const subPath = path.posix.join(year, month);
+            return { fullPath: thumbCandidate, subPath };
+          } catch (err) {
+            logger.debug('check thumb candidate access error', err);
+          }
+        }
+      }
+    } catch (err) {
+      logger.debug('findFilePath error', err);
+    }
+    return null;
   }
 
   /**
@@ -362,32 +480,31 @@ class UploadService {
    */
   async deleteFile(filename: string, includeThumbnail: boolean = true): Promise<boolean> {
     try {
-      const filePath = path.join(defaultOptions.destination!, filename);
-
-      // 删除原文件
-      try {
-        await fs.unlink(filePath);
-        logger.info(`删除文件: ${filename}`);
-      } catch (error) {
-        logger.warn(`文件不存在: ${filename}`, error);
-      }
-
-      // 删除缩略图
-      if (includeThumbnail) {
-        const thumbnailPath = path.join(
-          defaultOptions.destination!,
-          'thumbnails',
-          `thumb_${filename}`
-        );
+      const found = await this.findFilePath(filename);
+      if (found) {
         try {
-          await fs.unlink(thumbnailPath);
+          await fs.unlink(found.fullPath);
+          logger.info(`删除文件: ${found.fullPath}`);
         } catch (error) {
-          // 缩略图可能不存在，忽略错误
-          logger.error(error);
+          logger.warn(`删除文件失败: ${found.fullPath}`, error);
         }
-      }
 
-      return true;
+        if (includeThumbnail) {
+          // thumbnail name可能已经在 thumbnails 中，尝试删除
+          const thumbDir = path.join(path.dirname(found.fullPath), 'thumbnails');
+          const thumbPath = path.join(thumbDir, `thumb_${filename}`);
+          try {
+            await fs.unlink(thumbPath);
+          } catch (err) {
+            logger.debug('删除缩略图失败或不存在', err);
+          }
+        }
+
+        return true;
+      } else {
+        logger.warn('删除文件失败: 未找到文件', filename);
+        return false;
+      }
     } catch (error) {
       logger.error('删除文件失败:', error);
       return false;
@@ -405,13 +522,13 @@ class UploadService {
     thumbnailUrl?: string;
   }> {
     try {
-      const filePath = path.join(defaultOptions.destination!, filename);
-      const stats = await fs.stat(filePath);
-      const thumbnailPath = path.join(
-        defaultOptions.destination!,
-        'thumbnails',
-        `thumb_${filename}`
-      );
+      const found = await this.findFilePath(filename);
+      if (!found) return { exists: false };
+
+      const stats = await fs.stat(found.fullPath);
+      // thumbnail 是否存在
+      const thumbnailDir = path.join(path.dirname(found.fullPath), 'thumbnails');
+      const thumbnailPath = path.join(thumbnailDir, `thumb_${filename}`);
       const thumbnailExists = await fs
         .access(thumbnailPath)
         .then(() => true)
@@ -421,8 +538,10 @@ class UploadService {
         exists: true,
         size: stats.size,
         createdAt: stats.birthtime,
-        url: this.getFileUrl(filename),
-        thumbnailUrl: thumbnailExists ? this.getFileUrl(`thumb_${filename}`, true) : undefined,
+        url: this.getFileUrl(path.basename(found.fullPath), found.subPath),
+        thumbnailUrl: thumbnailExists
+          ? this.getFileUrl(`thumb_${filename}`, found.subPath, true)
+          : undefined,
       };
     } catch (error) {
       logger.error(error);

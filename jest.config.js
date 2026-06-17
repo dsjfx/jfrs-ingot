@@ -8,5 +8,8 @@ module.exports = {
   coverageReporters: ['text', 'lcov'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^uuid$': '<rootDir>/tests/__mocks__/uuid.js',
   },
+  // Allow transforming some ESM packages (e.g., uuid v13) by excluding them from transformIgnorePatterns
+  transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
 };
