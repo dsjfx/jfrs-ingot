@@ -256,8 +256,8 @@ class PhotoService {
       const blog = await Blog.findByPk(id, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'username', 'avatar'] },
-          { model: Category, as: 'category', attributes: ['id', 'name'] },
-          { model: Tag, as: 'tags', attributes: ['id', 'name'], through: { attributes: [] } },
+          { model: Category, as: 'category', attributes: ['id', 'name', 'color'] },
+          { model: Tag, as: 'tags', attributes: ['id', 'name', 'color'], through: { attributes: [] } },
           { model: Photo, as: 'photos' }, // 包含照片
         ],
       });
