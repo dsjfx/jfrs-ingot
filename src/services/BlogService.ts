@@ -350,8 +350,8 @@ class BlogService {
       const blog = await Blog.findByPk(id, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'username', 'nickname', 'avatar'] },
-          { model: Category, as: 'category', attributes: ['id', 'name', 'description'] },
-          { model: Tag, as: 'tags', attributes: ['id', 'name'] },
+          { model: Category, as: 'category', attributes: ['id', 'name', 'color', 'description'] },
+          { model: Tag, as: 'tags', attributes: ['id', 'name', 'color'] },
         ],
       });
 
