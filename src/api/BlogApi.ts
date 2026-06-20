@@ -14,7 +14,7 @@ class BlogApi {
     title: Joi.string().min(1).max(200).required(),
     content: Joi.string().min(1).required(),
     summary: Joi.string().max(500).optional(),
-    coverImage: Joi.string().uri().optional().allow(''),
+    coverImage: Joi.string().uri().optional().allow(null).allow(''),
     status: Joi.string().valid('draft', 'published', 'archived').default('draft'),
     categoryId: Joi.number().integer().positive().optional(),
     tagIds: Joi.array().items(Joi.number().integer().positive()).optional(),

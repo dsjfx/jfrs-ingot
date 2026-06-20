@@ -1,4 +1,6 @@
 #!/usr/bin/env ts-node
+import init from '../src/init';
+init();
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
@@ -122,9 +124,13 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = !args.includes('--apply');
 
-  logger.info(`Migrate uploads from ${UPLOAD_DIR} (apply=${!dryRun})`);
-  await walkAndMigrate(dryRun);
-  logger.info('done');
+  if (UPLOAD_DIR) {
+    logger.info(`Migrate uploads from ${UPLOAD_DIR} (apply=${!dryRun})`);
+    await walkAndMigrate(dryRun);
+    logger.info('done');
+  } else {
+    logger.info('this upload dir is empty');
+  }
 }
 
 main().catch(err => {
