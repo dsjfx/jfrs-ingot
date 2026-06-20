@@ -48,6 +48,7 @@ class BlogService {
         await blog.$set('tags', blogData.tagIds);
       }
 
+      // if publish and no set published date, use create date 
       if (!blog.publishedAt && blogData.status === 'published') {
         blog.publishedAt = blog.createdAt;
         await blog.save();
@@ -57,6 +58,9 @@ class BlogService {
       if (blogData.categoryId) {
         await this.updateCategoryBlogCount(blogData.categoryId);
       }
+
+      // update the number of blog for used tag
+      // ...
 
       logger.info(`博客创建成功: ${blog.title}`);
       return blog;
@@ -335,7 +339,7 @@ class BlogService {
         distinct: true,
         offset,
         limit: size,
-        order: [['createdAt', 'DESC']],
+        order: [['publishedAt', 'DESC']],
       });
 
       return { blogs, total };
@@ -403,11 +407,11 @@ class BlogService {
       }
 
       // 构建排序条件
-      // let order: any = [['createdAt', 'DESC']];
+      // let order: any = [['publishedAt', 'DESC']];
       // if (sort === 'oldest') {
-      //   order = [['createdAt', 'ASC']];
+      //   order = [['publishedAt', 'ASC']];
       // } else if (sort === 'likes') {
-      //   order = [['likesCount', 'DESC'], ['createdAt', 'DESC']];
+      //   order = [['likesCount', 'DESC'], ['publishedAt', 'DESC']];
       // }
 
       const { rows: comments, count: total } = await Comment.findAndCountAll({
@@ -439,7 +443,7 @@ class BlogService {
         offset,
         limit: size,
         order: [
-          ['createdAt', 'DESC'],
+          ['publishedAt', 'DESC'],
           [{ model: Comment, as: 'replies' }, 'createdAt', 'ASC'],
         ],
       });
@@ -558,7 +562,7 @@ class BlogService {
         ],
         order: [
           ['views', 'DESC'], // 按浏览量排序
-          ['createdAt', 'DESC'], // 按创建时间排序
+          ['publishedAt', 'DESC'], // 按创建时间排序
         ],
         limit: limit,
       });
@@ -648,7 +652,7 @@ class BlogService {
               },
             ],
             offset,
-            order: [['createdAt', 'DESC']],
+            order: [['publishedAt', 'DESC']],
           });
           return blog;
         })
@@ -685,7 +689,7 @@ class BlogService {
               through: { attributes: [] },
             },
           ],
-          order: [['createdAt', 'DESC']],
+          order: [['publishedAt', 'DESC']],
           limit: remainingCount,
         });
 
@@ -856,7 +860,7 @@ class BlogService {
             through: { attributes: [] },
           },
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['publishedAt', 'DESC']],
       };
 
       if (limit && limit > 0) {
@@ -975,7 +979,7 @@ class BlogService {
         ],
         offset,
         limit: size,
-        order: [['createdAt', 'DESC']],
+        order: [['publishedAt', 'DESC']],
       });
 
       return { blogs, total };
@@ -1009,8 +1013,8 @@ class BlogService {
 
       // 2. 构建查询条件
       const where: WhereOptions = {
-        createdAt: {
-          [Op.lt]: currentBlog.createdAt, // 发布时间早于当前博客
+        publishedAt: {
+          [Op.lt]: currentBlog.publishedAt, // 发布时间早于当前博客
         },
         id: {
           [Op.ne]: id, // 排除当前博客
@@ -1057,7 +1061,7 @@ class BlogService {
             attributes: ['id', 'name'],
           },
         ],
-        order: [['createdAt', 'DESC']], // 取最近的一篇
+        order: [['publishedAt', 'DESC']], // 取最近的一篇
       });
 
       return prevBlog;
@@ -1091,8 +1095,8 @@ class BlogService {
 
       // 2. 构建查询条件
       const where: WhereOptions = {
-        createdAt: {
-          [Op.gt]: currentBlog.createdAt, // 发布时间晚于当前博客
+        publishedAt: {
+          [Op.gt]: currentBlog.publishedAt, // 发布时间晚于当前博客
         },
         id: {
           [Op.ne]: id, // 排除当前博客
@@ -1139,7 +1143,7 @@ class BlogService {
             attributes: ['id', 'name'],
           },
         ],
-        order: [['createdAt', 'ASC']], // 取最近的一篇
+        order: [['publishedAt', 'ASC']], // 取最近的一篇
       });
 
       return nextBlog;
@@ -1184,13 +1188,13 @@ class BlogService {
   /**
    * 获取相邻博客（按自定义排序）
    * @param id - 当前博客ID
-   * @param sortField - 排序字段（默认 'createdAt'）
+   * @param sortField - 排序字段（默认 'publishedAt'）
    * @param sortOrder - 排序方向（默认 'DESC'）
    * @param options - 可选配置
    */
   async getAdjacentBlogsBySort(
     id: number,
-    sortField: string = 'createdAt',
+    sortField: string = 'publishedAt',
     sortOrder: 'ASC' | 'DESC' = 'DESC',
     options: {
       status?: string;
