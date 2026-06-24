@@ -38,6 +38,15 @@ class Blog extends Model {
   title!: string;
 
   @Column({
+    type: DataType.STRING(200),
+    allowNull: true,
+    validate: {
+      len: [1, 200],
+    },
+  })
+  subtitle!: string;
+
+  @Column({
     type: DataType.ENUM(...Object.values(EBlogType)),
     defaultValue: EBlogType.ARTICLE,
   })

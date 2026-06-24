@@ -12,6 +12,7 @@ class BlogApi {
   // 验证模式
   static createSchema = Joi.object({
     title: Joi.string().min(1).max(200).required(),
+    subtitle: Joi.string().max(200).optional(),
     content: Joi.string().min(1).required(),
     summary: Joi.string().max(500).optional(),
     coverImage: Joi.string().uri().optional().allow(null).allow(''),
@@ -42,6 +43,7 @@ class BlogApi {
 
   static updateSchema = Joi.object({
     title: Joi.string().min(1).max(200).optional(),
+    subtitle: Joi.string().max(200).optional(),
     content: Joi.string().min(1).optional(),
     summary: Joi.string().max(500).optional(),
     coverImage: Joi.string().uri().optional().allow(''),
@@ -59,8 +61,8 @@ class BlogApi {
     tagId: Joi.number().integer().positive().optional(),
     authorId: Joi.number().integer().positive().optional(),
     search: Joi.string().max(100).empty('').optional(),
-    sortBy: Joi.string().valid('createdAt', 'updatedAt', 'views', 'title').default('createdAt'),
-    sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('DESC'),
+    // sortBy: Joi.string().valid('createdAt', 'updatedAt', 'views', 'title').default('createdAt'),
+    // sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('DESC'),
   }).unknown(true);
 
   /**

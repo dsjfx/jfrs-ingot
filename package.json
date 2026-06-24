@@ -33,7 +33,7 @@
     "deploy:drop": "NODE_ENV=production node ./scripts/drop-db.js",
     "deploy:init": "NODE_ENV=production npm run migrate && NODE_ENV=production npm run seed:serve",
     "deploy:reset": "npm run deploy:drop && npm run deploy:create && npm run deploy:init",
-    "migrate:uploads": "NODE_ENV=production ts-node ./scripts/migrate-uploads.ts"
+    "migrate:uploads": "ts-node ./scripts/migrate-uploads.ts"
   },
   "_moduleAliases": {
     "@": "./dist"
