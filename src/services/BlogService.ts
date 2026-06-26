@@ -1404,7 +1404,7 @@ class BlogService {
       // 2. 查询所有符合条件的博客
       const blogs = await Blog.findAll({
         where,
-        attributes: ['id', 'title', 'publishedAt', 'summary', 'coverImage'],
+        attributes: ['id', 'title', 'subtitle', 'publishedAt', 'summary', 'coverImage'],
         order: [['published_at', 'DESC']],
       });
 
@@ -1442,6 +1442,7 @@ class BlogService {
         yearMap.get(blogMonth)!.push({
           id: blog.id,
           title: blog.title,
+          subtitle: blog.subtitle,
           publishedAt: blog.publishedAt,
           day: blogDay,
           summary: blog.summary,
@@ -1476,6 +1477,7 @@ class BlogService {
             posts: posts.map(post => ({
               id: post.id,
               title: post.title,
+              subtitle: post.subtitle,
               publishedAt: post.publishedAt,
               day: post.day,
               summary: post.summary,
