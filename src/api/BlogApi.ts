@@ -12,7 +12,7 @@ class BlogApi {
   // 验证模式
   static createSchema = Joi.object({
     title: Joi.string().min(1).max(200).required(),
-    subtitle: Joi.string().max(200).optional().allow(null).allow(''),
+    subtitle: Joi.string().max(200).allow(null, '').optional(),
     content: Joi.string().min(1).required(),
     summary: Joi.string().max(500).optional(),
     coverImage: Joi.string().uri().optional().allow(null).allow(''),
@@ -43,7 +43,7 @@ class BlogApi {
 
   static updateSchema = Joi.object({
     title: Joi.string().min(1).max(200).optional(),
-    subtitle: Joi.string().max(200).optional().allow(null).allow(''),
+    subtitle: Joi.string().max(200).allow(null, '').optional(),
     content: Joi.string().min(1).optional(),
     summary: Joi.string().max(500).optional(),
     coverImage: Joi.string().uri().optional().allow(''),
