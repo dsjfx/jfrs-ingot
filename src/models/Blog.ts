@@ -41,7 +41,7 @@ class Blog extends Model {
     type: DataType.STRING(200),
     allowNull: true,
     validate: {
-      len: [1, 200],
+      len: [0, 200],
     },
   })
   subtitle!: string;
