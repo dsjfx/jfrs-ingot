@@ -1,14 +1,16 @@
+import { parseDurationToSeconds } from '../utils/FuncUtil';
+
 // Token配置
 export const tokenConfig = {
   accessToken: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
     expiresIn: process.env.JWT_EXPIRE || '2h',
-    expiresInSeconds: 30 * 24 * 60 * 60, // 1800秒
+    expiresInSeconds: parseDurationToSeconds(process.env.JWT_EXPIRE || '2h'),
   },
   refreshToken: {
     secret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
     expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d',
-    expiresInSeconds: 7 * 24 * 60 * 60, // 604800秒
+    expiresInSeconds: parseDurationToSeconds(process.env.JWT_REFRESH_EXPIRE || '7d'),
   },
 
   // Token 签发者

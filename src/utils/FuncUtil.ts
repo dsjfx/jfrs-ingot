@@ -35,6 +35,57 @@ export function generateRandomOffsets(total: number, count: number): number[] {
 }
 
 /**
+ * 将时长字符串解析为秒数
+ *
+ * 支持格式：
+ * - 30s / 30m / 2h / 7d / 1w / 1y
+ * - 1h30m / 1.5h
+ * - 90（纯数字表示秒）
+ */
+export function parseDurationToSeconds(duration: string | number): number {
+  if (typeof duration === 'number') {
+    if (!Number.isFinite(duration) || duration < 0) {
+      throw new Error(`Invalid duration number: ${duration}`);
+    }
+    return duration;
+  }
+
+  const trimmed = duration.trim().toLowerCase();
+  if (!trimmed) {
+    throw new Error('Invalid duration format: empty string');
+  }
+
+  // Pure numeric string is treated as seconds
+  if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+
+  const unitMultipliers: Record<string, number> = {
+    s: 1,
+    m: 60,
+    h: 60 * 60,
+    d: 24 * 60 * 60,
+    w: 7 * 24 * 60 * 60,
+    y: 365 * 24 * 60 * 60,
+  };
+
+  let totalSeconds = 0;
+  let remaining = trimmed;
+  const regex = /([0-9]+(?:\.[0-9]+)?)([smhdwy])/g;
+
+  remaining = remaining.replace(regex, (_, value, unit) => {
+    totalSeconds += Number(value) * unitMultipliers[unit];
+    return '';
+  });
+
+  if (remaining.length !== 0 || totalSeconds === 0) {
+    throw new Error(`Invalid duration format: ${duration}`);
+  }
+
+  return Math.floor(totalSeconds);
+}
+
+/**
  * 获取月份名称
  */
 export function getMonthName(month: number): string {
