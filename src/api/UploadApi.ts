@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import UploadService from '../services/UploadService';
 import { AppError } from '../middleware/errorHandler';
 import { ResponseFactory } from '../utils/ResponseFactory';
-import { writePicExif } from '@/utils/FuncUtil';
+import { writePicExif } from '../utils/FuncUtil';
 
 class UploadApi {
   /**
