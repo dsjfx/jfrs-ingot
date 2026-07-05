@@ -73,6 +73,6 @@ scripts/*.js
 src/**/*.js
 src/**/*.d.ts
 !src/types/*.d.ts
-test/**/*.js
-test/**/*.d.ts
+tests/**/*.js
+tests/**/*.d.ts
 
