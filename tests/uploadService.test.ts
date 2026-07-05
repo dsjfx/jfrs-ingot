@@ -17,6 +17,40 @@ describe('UploadService (basic non-image flow)', () => {
     await fs.rm(tmpRoot, { recursive: true, force: true }).catch(() => null);
   });
 
+  test('uploadFile includes time in image date when available', async () => {
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAIAAeIhvAAAAAElFTkSuQmCC',
+      'base64'
+    );
+    const tmpFilePath = path.join(tmpRoot, 'temp', `test-image-${Date.now()}.png`);
+    await fs.mkdir(path.dirname(tmpFilePath), { recursive: true });
+    await fs.writeFile(tmpFilePath, pngBuffer);
+
+    const multerFile: Express.Multer.File = {
+      fieldname: 'file',
+      originalname: 'test.png',
+      encoding: '7bit',
+      mimetype: 'image/png',
+      size: pngBuffer.length,
+      destination: path.dirname(tmpFilePath),
+      filename: path.basename(tmpFilePath),
+      path: tmpFilePath,
+      buffer: pngBuffer,
+      stream: undefined as unknown as NodeJS.ReadableStream,
+    } as unknown as Express.Multer.File;
+
+    const result = await UploadService.uploadFile(multerFile, {
+      allowedTypes: ['image/png'],
+      destination: tmpRoot,
+      compress: false,
+      createThumbnail: false,
+    });
+
+    expect(result.date).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+
+    await UploadService.deleteFile(result.filename);
+  });
+
   test('uploadFile saves to year/month and getFileInfo/deleteFile work', async () => {
     // create a temporary file to simulate multer file
     const tmpFilePath = path.join(tmpRoot, 'temp', `testfile-${Date.now()}`);

@@ -324,7 +324,7 @@ class UploadService {
         size: file.size,
         mimetype: file.mimetype,
       };
-      if (date0) result.date = formatDate(date0);
+      if (date0) result.date = formatDate(date0, 'yyyy-MM-dd HH:mm:ss');
 
       // 处理图片文件
       if (file.mimetype.startsWith('image/')) {
