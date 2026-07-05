@@ -2,8 +2,10 @@ import path from 'path';
 import fs from 'fs/promises';
 import { Readable } from 'stream';
 import sharp from 'sharp';
+import exifr from 'exifr';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
+import { formatDate } from '../utils/FuncUtil';
 import { AppError } from '../middleware/errorHandler';
 
 // 上传配置接口
@@ -26,6 +28,7 @@ export interface UploadResult {
   url: string;
   size: number;
   mimetype: string;
+  date?: string;
   thumbnail?: {
     filename: string;
     path?: string;
@@ -123,39 +126,49 @@ class UploadService {
     return allowedTypes.includes(mimetype);
   }
 
-  /**
-   * 从 exif buffer 中尝试解析出 "YYYY:MM:DD HH:MM:SS" 格式的日期，若解析失败返回 null
-   */
-  private parseExifDate(exifBuffer?: Buffer): Date | null {
-    if (!exifBuffer) return null;
-    try {
-      const str = exifBuffer.toString('latin1');
-      const m = str.match(/\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}/);
-      if (m && m[0]) {
-        const d = m[0].replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
-        return new Date(d.replace(' ', 'T'));
-      }
-    } catch (err) {
-      logger.debug('parseExifDate failed', err);
-    }
-    return null;
-  }
+  // /**
+  //  * 从 exif buffer 中尝试解析出 "YYYY:MM:DD HH:MM:SS" 格式的日期，若解析失败返回 null
+  //  */
+  // private parseExifDate(exifBuffer?: Buffer): Date | null {
+  //   if (!exifBuffer) return null;
+  //   try {
+  //     const str = exifBuffer.toString('latin1');
+  //     const m = str.match(/\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}/);
+  //     if (m && m[0]) {
+  //       const d = m[0].replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+  //       return new Date(d.replace(' ', 'T'));
+  //     }
+  //   } catch (err) {
+  //     logger.debug('parseExifDate failed', err);
+  //   }
+  //   return null;
+  // }
 
   /**
    * 获取图片的日期（优先 EXIF DateTimeOriginal，其次文件 birthtime，最后当前时间）
    */
   private async getImageDate(filePath: string): Promise<Date> {
     try {
-      const image = sharp(filePath);
-      const metadata = await image.metadata();
+      const exifData = await exifr.parse(filePath, {
+        tiff: true,
+        exif: true,
+        gps: false,
+      });
 
-      const exifDate = this.parseExifDate(metadata.exif as Buffer | undefined);
-      if (exifDate) return exifDate;
+      if (exifData?.DateTimeOriginal) {
+        return exifData.DateTimeOriginal as Date;
+      }
+      if (exifData?.CreateDate) {
+        return exifData.CreateDate as Date;
+      }
+      if (exifData?.ModifyDate) {
+        return exifData.ModifyDate as Date;
+      }
 
       const stats = await fs.stat(filePath);
       if (stats.birthtimeMs && !isNaN(stats.birthtimeMs)) return stats.birthtime;
     } catch (err) {
-      logger.debug('getImageDate: failed to read EXIF, fallback', err);
+      logger.debug('getImageDate: failed to read EXIF via exifr, fallback', err);
     }
     return new Date();
   }
@@ -268,6 +281,7 @@ class UploadService {
 
       // 生成文件名
       const filename = opts.fileName || this.generateFileName(file.originalname);
+      let date0 = null;
 
       // 先确定目标子目录（year/month），仅对图片尝试读取 EXIF 获取日期
       let targetSubPath = ''; // e.g., "2026/12"
@@ -275,6 +289,7 @@ class UploadService {
         let date = new Date();
         if (file.mimetype.startsWith('image/')) {
           date = await this.getImageDate(file.path);
+          date0 = date;
         } else {
           const stats = await fs.stat(file.path);
           if (stats.birthtimeMs && !isNaN(stats.birthtimeMs)) date = stats.birthtime;
@@ -309,6 +324,7 @@ class UploadService {
         size: file.size,
         mimetype: file.mimetype,
       };
+      if (date0) result.date = formatDate(date0);
 
       // 处理图片文件
       if (file.mimetype.startsWith('image/')) {

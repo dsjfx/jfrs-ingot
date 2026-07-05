@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import UploadService from '../services/UploadService';
 import { AppError } from '../middleware/errorHandler';
 import { ResponseFactory } from '../utils/ResponseFactory';
+import { writePicExif } from '@/utils/FuncUtil';
 
 class UploadApi {
   /**
@@ -13,18 +14,23 @@ class UploadApi {
       if (!req.file) {
         throw new AppError('没有上传文件', 400);
       }
+      // exif data from request body
+      const DateTimeOriginal = req.body.DateTimeOriginal;
+      const CreateDate = req.body.CreateDate;
+      const ModifyDate = req.body.ModifyDate;
+
+      // write exif data to the uploaded file
+      await writePicExif(req.file, {
+        DateTimeOriginal,
+        CreateDate,
+        ModifyDate,
+      });
 
       const result = await UploadService.uploadFile(req.file, {
-        // 可以在这里覆盖默认配置
         createThumbnail: true,
         compress: true,
       });
 
-      // res.json({
-      //   success: true,
-      //   data: result,
-      //   message: '文件上传成功',
-      // });
       res.json(ResponseFactory.success(result, '文件上传成功'));
     } catch (error) {
       next(error);
@@ -42,11 +48,6 @@ class UploadApi {
 
       const results = await UploadService.uploadMultiple(req.files);
 
-      // res.json({
-      //   success: true,
-      //   data: results,
-      //   message: `成功上传 ${results.length} 个文件`
-      // });
       res.json(ResponseFactory.success(results, `成功上传 ${results.length} 个文件`));
     } catch (error) {
       next(error);
@@ -73,11 +74,6 @@ class UploadApi {
         quality: 90,
       });
 
-      // res.json({
-      //   success: true,
-      //   data: result,
-      //   message: '头像上传成功'
-      // });
       res.json(ResponseFactory.success(result, '头像上传成功'));
     } catch (error) {
       next(error);
@@ -97,11 +93,6 @@ class UploadApi {
 
       const result = await UploadService.uploadBase64Image(image, filename);
 
-      // res.json({
-      //   success: true,
-      //   data: result,
-      //   message: '图片上传成功'
-      // });
       res.json(ResponseFactory.success(result, '图片上传成功'));
     } catch (error) {
       next(error);
@@ -121,10 +112,6 @@ class UploadApi {
 
       const success = await UploadService.deleteFile(filename as string);
 
-      // res.json({
-      //   success,
-      //   message: success ? '文件删除成功' : '文件删除失败'
-      // });
       res.json(ResponseFactory.success(filename, success ? '文件删除成功' : '文件删除失败'));
     } catch (error) {
       next(error);
@@ -148,10 +135,6 @@ class UploadApi {
         throw new AppError('文件不存在', 404);
       }
 
-      // res.json({
-      //   success: true,
-      //   data: info,
-      // });
       res.json(ResponseFactory.success(info, '获取文件信息成功'));
     } catch (error) {
       next(error);

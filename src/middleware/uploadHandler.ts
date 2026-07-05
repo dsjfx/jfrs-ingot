@@ -5,19 +5,21 @@ import { Request, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from './errorHandler';
 
-// 配置 multer 存储
+// 配置 multer 存储引擎
 const storage = multer.diskStorage({
+  // 决定文件保存位置
   destination: (_req, _file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/temp');
     // 确保目录存在
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, uploadDir); // 保存到临时目录
   },
+  // 决定文件名
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
+    cb(null, `${uuidv4()}${ext}`); // 生成唯一文件名
   },
 });
 
@@ -26,9 +28,9 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
   if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
+    cb(null, true); // 接受文件
   } else {
-    cb(new AppError(`不支持的文件类型: ${file.mimetype}`, 400));
+    cb(new AppError(`不支持的文件类型: ${file.mimetype}`, 400)); // 拒绝文件
   }
 };
 

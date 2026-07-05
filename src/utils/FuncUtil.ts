@@ -1,3 +1,7 @@
+import exifr from 'exifr';
+import { ExifTool } from 'exiftool-vendored';
+import logger from '../utils/logger';
+
 // 枚举值查找函数
 export function getEnumByValue<T extends Record<string, string>>(
   enumObj: T,
@@ -104,4 +108,74 @@ export function getMonthName(month: number): string {
     '12月',
   ];
   return monthNames[month - 1];
+}
+
+/**
+ * 格式化日期为字符串，支持自定义格式。
+ * 默认格式为 "yyyy-MM-dd"
+ * 支持标记：yyyy, yy, MM, dd, HH, mm, ss
+ */
+export function formatDate(input: Date | string | number, format: string = 'yyyy-MM-dd'): string {
+  const d = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return '';
+  const replacements: Record<string, string> = {
+    yyyy: d.getFullYear().toString(),
+    yy: d.getFullYear().toString().slice(-2),
+    MM: String(d.getMonth() + 1).padStart(2, '0'),
+    dd: String(d.getDate()).padStart(2, '0'),
+    HH: String(d.getHours()).padStart(2, '0'),
+    mm: String(d.getMinutes()).padStart(2, '0'),
+    ss: String(d.getSeconds()).padStart(2, '0'),
+  };
+  return Object.keys(replacements).reduce(
+    (str, token) => str.replace(new RegExp(token, 'g'), replacements[token]),
+    format
+  );
+}
+
+export async function writePicExif(
+  file: Express.Multer.File,
+  exifData: Record<string, any>
+): Promise<void> {
+  // instance of ExifTool
+  const exiftool = new ExifTool();
+
+  // Get the file path
+  const filePath = file.path;
+
+  try {
+    // Prepare the EXIF data to be written
+    const exifToWrite = {
+      DateTimeOriginal: exifData.DateTimeOriginal || '',
+      CreateDate: exifData.CreateDate || '',
+      ModifyDate: exifData.ModifyDate || '',
+      DateTimeDigitized: exifData.DateTimeDigitized || '',
+      Make: exifData.Make || '',
+      Model: exifData.Model || '',
+      Copyright: exifData.Copyright || '',
+      Artist: exifData.Artist || '',
+      ExposureTime: exifData.ExposureTime || '',
+      FNumber: exifData.FNumber || '',
+      ISO: exifData.ISO || '',
+      FocalLength: exifData.FocalLength || '',
+      Latitude: exifData.GPS?.Latitude || '',
+      Longitude: exifData.GPS?.Longitude || '',
+      Altitude: exifData.GPS?.Altitude || '',
+    };
+
+    // write EXIF
+    await exiftool.write(filePath, exifToWrite, {
+      writeArgs: ['-overwrite_original'],
+      ignoreMinorErrors: true,
+    });
+
+    // Verify the new file
+    const newMeta = await exifr.parse(filePath);
+    logger.info('Shooting time:', newMeta.DateTimeOriginal);
+  } catch (error) {
+    logger.error('error:', error);
+  } finally {
+    // Close the process
+    await exiftool.end();
+  }
 }
