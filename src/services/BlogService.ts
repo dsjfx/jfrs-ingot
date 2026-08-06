@@ -325,6 +325,7 @@ class BlogService {
       if (filters.search) {
         where[Op.or] = [
           { title: { [Op.like]: `%${filters.search}%` } },
+          { subtitle: { [Op.like]: `%${filters.search}%`} },
           { content: { [Op.like]: `%${filters.search}%` } },
         ];
       }

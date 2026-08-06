@@ -291,7 +291,7 @@ class PhotoService {
         filters = {},
         includePhotos = true,
         photoLimit = 5,
-        sortBy = 'createdAt',
+        sortBy = 'publishedAt',
         sortOrder = 'DESC',
       } = options;
 
