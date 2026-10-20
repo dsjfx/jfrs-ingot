@@ -11,6 +11,7 @@ import {
   UserProfile,
   UserRegister,
 } from '../types/user';
+import { BriefUser } from '@/types/auth';
 
 class AuthService {
   /**
@@ -295,6 +296,95 @@ class AuthService {
       logger.info(`用户密码修改成功: ${user.username} (ID: ${user.id})`);
     } catch (error) {
       logger.error('修改密码失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 根据邮箱查询用户
+   * @param email - 用户邮箱
+   * @param options - 查询选项
+   * @returns 用户信息，不存在则返回 null
+   */
+  async findByEmail(
+    email: string,
+    options: {
+      includePassword?: boolean; // 是否包含密码字段（默认false）
+      includeProfile?: boolean; // 是否包含完整资料（默认true）
+      paranoid?: boolean; // 是否包含已删除的用户（默认false）
+    } = {}
+  ): Promise<User | null> {
+    try {
+      const { includePassword = false, includeProfile = true, paranoid = false } = options;
+
+      // 构建查询属性
+      const attributes = includeProfile
+        ? undefined // 返回所有字段
+        : ['id', 'username', 'email', 'role', 'avatar', 'createdAt'];
+
+      const user = await User.findOne({
+        where: { email },
+        attributes,
+        paranoid, // false: 不包含软删除的用户
+      });
+
+      if (!user) {
+        logger.debug(`未找到邮箱为 ${email} 的用户`);
+        return null;
+      }
+
+      // 如果不包含密码，从结果中删除
+      if (!includePassword) {
+        user.password = undefined as any;
+      }
+
+      logger.debug(`找到用户: ${user.username} (${email})`);
+      return user;
+    } catch (error) {
+      logger.error('根据邮箱查询用户失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 根据邮箱查询用户（简化版，只返回基础信息）
+   */
+  async findByEmailSimple(email: string): Promise<BriefUser | null> {
+    try {
+      const user = await User.findOne({
+        where: { email },
+        attributes: ['id', 'username', 'nickname', 'email', 'role', 'avatar'],
+      });
+
+      if (!user) {
+        return null;
+      }
+
+      return {
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+      };
+    } catch (error) {
+      logger.error('根据邮箱查询用户失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查邮箱是否已被注册
+   */
+  async isEmailExists(email: string): Promise<boolean> {
+    try {
+      const count = await User.count({
+        where: { email },
+      });
+      return count > 0;
+    } catch (error) {
+      logger.error('检查邮箱是否存在失败:', error);
       throw error;
     }
   }

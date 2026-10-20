@@ -61,6 +61,36 @@ class AuthApi {
     }
   }
 
+  /**
+   * 根据邮箱查询用户
+   */
+  async getUserByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.query;
+
+      if (!email || typeof email !== 'string') {
+        throw new AppError('请提供邮箱地址', 400);
+      }
+
+      // 邮箱格式验证
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new AppError('邮箱格式不正确', 400);
+      }
+
+      const user = await AuthService.findByEmailSimple(email);
+
+      if (!user) {
+        res.json(ResponseFactory.success(null, '未找到该邮箱对应的用户'));
+        return;
+      }
+
+      res.json(ResponseFactory.success(user, '查找用户成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUserAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // 从请求中获取用户ID（由认证中间件设置）

@@ -150,6 +150,7 @@ export interface BulkModerationParams {
 
 /**
  * 评论过滤字段
+ * Fields used for filtering comments in queries.
  */
 export interface CommentFilters {
   status?: string;
@@ -157,6 +158,43 @@ export interface CommentFilters {
   userId?: number;
   parentId?: number | null;
   search?: string;
+}
+
+/**
+ * 评论用户数据
+ * Data for the user who made the comment.
+ */
+export interface CommentUserData {
+  name: string;
+  email: string;
+  website?: string;
+  avatar?: string;
+  ip?: string;
+  userAgent?: string;
+}
+
+/**
+ * 评论举报数据
+ * Data for reporting comments
+ */
+export interface CommentReportData {
+  commentId: number;
+  reason: string;
+  description?: string;
+  reporterEmail?: string;
+  reporterIp?: string;
+  reporterId?: number;
+}
+
+/**
+ * 评论查看者上下文
+ * 用于判断当前访客是否屏蔽了评论作者
+ * Context for the viewer of the comments, used to determine if the
+ * current visitor has blocked the comment author.
+ */
+export interface ViewerContext {
+  viewerId?: number; // 当前访客的评论用户ID
+  viewerEmail?: string; // 或者用邮箱
 }
 
 export default {

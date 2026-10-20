@@ -51,10 +51,10 @@ const transports = [
   // 控制台输出（仅开发环境）
   ...(process.env.NODE_ENV === 'development'
     ? [
-        new winston.transports.Console({
-          format: consoleFormat,
-        }),
-      ]
+      new winston.transports.Console({
+        format: consoleFormat,
+      }),
+    ]
     : []),
 
   // 错误日志文件（按天轮转）

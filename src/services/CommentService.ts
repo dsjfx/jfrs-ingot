@@ -1,10 +1,11 @@
 import { Op, WhereOptions } from 'sequelize';
-import Comment from '../models/Comment';
-import Blog from '../models/Blog';
-import User from '../models/User';
-import logger from '../utils/logger';
+import { Comment, CommentUser, Blog, CommentReport, sequelize } from '../models';
+import CommentUserService from './CommentUserService';
+import type { CommentFilters, ViewerContext } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import type { CommentFilters } from '../types';
+import logger from '../utils/logger';
+import CommentBlockService from './CommentBlockService';
+import CommentBlockPersonal from '@/models/CommentBlockPersonal';
 
 class CommentService {
   /**
@@ -12,21 +13,62 @@ class CommentService {
    */
   async createComment(
     blogId: number,
-    userId: number,
+    userData: {
+      name: string;
+      email: string;
+      website?: string;
+      ip?: string;
+      userAgent?: string;
+    },
     content: string,
     parentId?: number,
-    replyToId?: number
+    replyToId?: number,
+    status: 'pending' | 'approved' | 'rejected' = 'pending'
   ): Promise<Comment> {
+    const transaction = await Comment.sequelize!.transaction();
+
     try {
+      // 0. 检查是否被屏蔽
+      const blockCheck = await CommentBlockService.isBlocked({
+        email: userData.email,
+        ip: userData.ip,
+        content: content,
+      });
+
+      if (blockCheck.blocked) {
+        throw new AppError(blockCheck.reason || '您已被禁止发表评论', 403);
+      }
+
+      // 查找或创建评论用户
+      const commentUser = await CommentUserService.findOrCreate(
+        {
+          name: userData.name,
+          email: userData.email,
+          website: userData.website,
+          ip: userData.ip,
+          userAgent: userData.userAgent,
+        },
+        { transaction }
+      );
+
+      // 1.5 再次检查用户级别屏蔽
+      const userBlockCheck = await CommentBlockService.isBlocked({
+        userId: commentUser.id,
+      });
+
+      if (userBlockCheck.blocked) {
+        throw new AppError(userBlockCheck.reason || '您的账号已被禁止发表评论', 403);
+      }
+
       // 验证博客是否存在
-      const blog = await Blog.findByPk(blogId);
+      const blog = await Blog.findByPk(blogId, { transaction });
       if (!blog) {
         throw new AppError('博客不存在', 404);
       }
 
       // 验证父评论是否存在（如果是回复）
       if (parentId) {
-        const parentComment = await Comment.findByPk(parentId);
+        const parentComment = await Comment.findByPk(parentId, { transaction });
         if (!parentComment) {
           throw new AppError('父评论不存在', 404);
         }
@@ -39,7 +81,7 @@ class CommentService {
 
       // 验证回复的评论是否存在（如果是回复特定评论）
       if (replyToId) {
-        const replyToComment = await Comment.findByPk(replyToId);
+        const replyToComment = await Comment.findByPk(replyToId, { transaction });
         if (!replyToComment) {
           throw new AppError('回复的评论不存在', 404);
         }
@@ -50,19 +92,30 @@ class CommentService {
         }
       }
 
-      const comment = await Comment.create({
-        blogId,
-        userId,
-        content,
-        parentId,
-        replyToId,
-        status: 'pending', // 默认需要审核
-      });
+      const comment = await Comment.create(
+        {
+          blogId,
+          userId: commentUser.id,
+          content,
+          parentId,
+          replyToId,
+          status, // 默认需要审核
+        },
+        { transaction }
+      );
 
-      logger.info(`评论创建成功: ID=${comment.id}, 博客ID=${blogId}, 用户ID=${userId}`);
+      // 更新评论用户统计
+      await CommentUserService.updateCommentStats(commentUser.id, { transaction });
 
-      return comment;
+      await transaction.commit();
+
+      logger.info(`评论创建成功: ID=${comment.id}, 博客ID=${blogId}, 用户ID=${commentUser.id}`);
+
+      return (await Comment.findByPk(comment.id, {
+        include: [{ model: CommentUser, as: 'user' }],
+      })) as Comment;
     } catch (error) {
+      await transaction.rollback();
       logger.error('创建评论失败:', error);
       throw error;
     }
@@ -76,34 +129,34 @@ class CommentService {
       const comment = await Comment.findByPk(id, {
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'avatar', 'email'],
+            attributes: ['id', 'name', 'email', 'website', 'avatar', 'commentCount'],
           },
           {
             model: Blog,
             as: 'blog',
             attributes: ['id', 'title', 'authorId'],
           },
-          // {
-          //   model: Comment,
-          //   as: 'parent',
-          //   include: [
-          //     {
-          //       model: User,
-          //       as: 'user',
-          //       attributes: ['id', 'username'],
-          //     },
-          //   ],
-          // },
+          {
+            model: Comment,
+            as: 'parent',
+            include: [
+              {
+                model: CommentUser,
+                as: 'user',
+                attributes: ['id', 'name'],
+              },
+            ],
+          },
           {
             model: Comment,
             as: 'replyTo',
             include: [
               {
-                model: User,
+                model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'username'],
+                attributes: ['id', 'name'],
               },
             ],
           },
@@ -112,9 +165,9 @@ class CommentService {
             as: 'replies',
             include: [
               {
-                model: User,
+                model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'username', 'avatar'],
+                attributes: ['id', 'name', 'avatar'],
               },
             ],
             where: { status: 'approved' },
@@ -149,8 +202,10 @@ class CommentService {
     userId: number,
     userRole: string
   ): Promise<Comment> {
+    const transaction = await Comment.sequelize!.transaction();
+
     try {
-      const comment = await Comment.findByPk(id);
+      const comment = await Comment.findByPk(id, { transaction });
       if (!comment) {
         throw new AppError('评论不存在', 404);
       }
@@ -169,7 +224,7 @@ class CommentService {
 
       // 如果更新状态为 approved，需要检查博客是否存在
       if (updateData.status === 'approved') {
-        const blog = await Blog.findByPk(comment.blogId);
+        const blog = await Blog.findByPk(comment.blogId, { transaction });
         if (!blog) {
           throw new AppError('关联的博客不存在', 404);
         }
@@ -177,10 +232,18 @@ class CommentService {
 
       await comment.update(updateData);
 
+      // 更新评论用户统计
+      if (updateData.status) {
+        await CommentUserService.updateCommentStats(comment.userId, { transaction });
+      }
+
+      await transaction.commit();
+
       logger.info(`评论更新成功: ID=${id}, 更新内容: ${JSON.stringify(updateData)}`);
 
       return comment;
     } catch (error) {
+      await transaction.rollback();
       logger.error('更新评论失败:', error);
       throw error;
     }
@@ -190,23 +253,32 @@ class CommentService {
    * 删除评论
    */
   async deleteComment(id: number, userId: number, userRole: string): Promise<void> {
+    const transaction = await Comment.sequelize!.transaction();
+
     try {
-      const comment = await Comment.findByPk(id);
+      const comment = await Comment.findByPk(id, { transaction });
       if (!comment) {
         throw new AppError('评论不存在', 404);
       }
 
       // 检查权限
       if (userRole !== 'admin' && userRole !== 'editor') {
-        if (comment.userId !== userId) {
+        if (`${comment.userId}` !== `${userId}`) {
           throw new AppError('没有权限删除该评论', 403);
         }
       }
 
-      await comment.destroy();
+      const commentUserId = comment.userId;
+      await comment.destroy({ transaction });
+
+      // 更新评论用户统计
+      await CommentUserService.updateCommentStats(commentUserId, { transaction });
+
+      await transaction.commit();
 
       logger.info(`评论删除成功: ID=${id}, 删除者用户ID=${userId}`);
     } catch (error) {
+      await transaction.rollback();
       logger.error('删除评论失败:', error);
       throw error;
     }
@@ -245,11 +317,19 @@ class CommentService {
 
   /**
    * 获取评论列表
+   * Get a paginated list of comments with optional filters and
+   * viewer context.
+   *
+   * @param current - The current page number (default: 1).
+   * @param size - The number of comments per page (default: 20).
+   * @param filters - The filters to apply to the comment list.
+   * @param viewer - The viewer context.
    */
   async getComments(
     current: number = 1,
     size: number = 20,
-    filters: CommentFilters = {}
+    filters: CommentFilters = {},
+    viewer?: ViewerContext
   ): Promise<{ comments: Comment[]; total: number }> {
     try {
       const offset = (current - 1) * size;
@@ -275,13 +355,30 @@ class CommentService {
         where.content = { [Op.like]: `%${filters.search}%` };
       }
 
+      // 如果有访客身份，排除被该访客屏蔽的用户
+      if (viewer?.viewerId) {
+        // 查出当前访客屏蔽的所有用户ID
+        const personalBlocks = await CommentBlockPersonal.findAll({
+          where: { blockerId: viewer.viewerId },
+          attributes: ['blockedId'],
+          raw: true,
+        });
+
+        const blockedUserIds = personalBlocks.map(b => b.blockedId);
+
+        if (blockedUserIds.length > 0) {
+          where.userId = {
+            [Op.notIn]: blockedUserIds,
+          };
+        }
+      }
       const { rows: comments, count: total } = await Comment.findAndCountAll({
         where,
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'nickname', 'avatar'],
+            attributes: ['id', 'name', 'email', 'website', 'avatar'],
           },
           {
             model: Blog,
@@ -293,9 +390,9 @@ class CommentService {
             as: 'replyTo',
             include: [
               {
-                model: User,
+                model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'username', 'nickname'],
+                attributes: ['id', 'name', 'avatar'],
               },
             ],
           },
@@ -304,9 +401,9 @@ class CommentService {
             as: 'replies',
             include: [
               {
-                model: User,
+                model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'username', 'nickname', 'avatar'],
+                attributes: ['id', 'name', 'avatar'],
               },
             ],
             where: { status: 'approved' },
@@ -319,11 +416,130 @@ class CommentService {
         order: [['createdAt', 'DESC']],
       });
 
+      // 附加举报信息
+      await this.attachReportInfo(comments);
+
+      // 附加"是否已被当前访客屏蔽"的信息
+      if (viewer?.viewerId) {
+        await this.attachBlockStatus(comments, viewer.viewerId);
+      }
+
       return { comments, total };
     } catch (error) {
       logger.error('获取评论列表失败:', error);
       throw error;
     }
+  }
+
+  /**
+   * 为评论列表附加举报信息
+   */
+  private async attachReportInfo(comments: Comment[]): Promise<void> {
+    if (comments.length === 0) return;
+
+    // 收集所有评论ID（包括回复）
+    const commentIds: number[] = [];
+    const collectIds = (list: Comment[]) => {
+      list.forEach(c => {
+        commentIds.push(c.id);
+        if (c.replies) {
+          collectIds(c.replies);
+        }
+      });
+    };
+    collectIds(comments);
+
+    if (commentIds.length === 0) return;
+
+    // 一次性统计所有评论的举报数（按状态分组）
+    const reportStats = (await CommentReport.findAll({
+      attributes: ['commentId', 'status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      where: {
+        commentId: { [Op.in]: commentIds },
+      },
+      group: ['commentId', 'status'],
+      raw: true,
+    })) as any[];
+
+    // 构建映射：commentId -> { total, pending, resolved, rejected, ignored }
+    const reportMap = new Map<
+      number,
+      {
+        total: number;
+        pending: number;
+        resolved: number;
+        rejected: number;
+        ignored: number;
+      }
+    >();
+
+    for (const stat of reportStats) {
+      const commentId = stat.commentId;
+      const count = parseInt(stat.count, 10);
+
+      if (!reportMap.has(commentId)) {
+        reportMap.set(commentId, {
+          total: 0,
+          pending: 0,
+          resolved: 0,
+          rejected: 0,
+          ignored: 0,
+        });
+      }
+
+      const info = reportMap.get(commentId)!;
+      info.total += count;
+      info[stat.status as keyof typeof info] = count;
+    }
+
+    // 附加到每个评论
+    const attachToComment = (comment: Comment) => {
+      const info = reportMap.get(comment.id);
+
+      (comment as any).reportInfo = info || {
+        total: 0,
+        pending: 0,
+        resolved: 0,
+        rejected: 0,
+        ignored: 0,
+      };
+
+      comment.setDataValue('isReported', (info?.total || 0) > 0);
+
+      // 递归处理回复
+      if ((comment as any).replies) {
+        (comment as any).replies.forEach(attachToComment);
+      }
+    };
+
+    comments.forEach(attachToComment);
+  }
+
+  /**
+   * 附加"是否被当前访客屏蔽"信息
+   */
+  private async attachBlockStatus(comments: Comment[], viewerId: number) {
+    if (comments.length === 0) return;
+
+    // 收集评论用户ID
+    const commentUserIds = [...new Set(comments.map(c => c.userId))];
+
+    // 查询当前访客屏蔽了哪些评论用户
+    const blocks = await CommentBlockPersonal.findAll({
+      where: {
+        blockerId: viewerId,
+        blockedId: { [Op.in]: commentUserIds },
+      },
+      attributes: ['blockedId'],
+      raw: true,
+    });
+
+    const blockedSet = new Set(blocks.map(b => b.blockedId));
+
+    // 附加到评论
+    comments.forEach(comment => {
+      comment.setDataValue('isBlocked', blockedSet.has(comment.userId));
+    });
   }
 
   /**
@@ -356,27 +572,27 @@ class CommentService {
         where,
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'nickname', 'avatar'],
+            attributes: ['id', 'name', 'website', 'avatar'],
           },
           {
             model: Comment,
             as: 'replies',
             include: [
               {
-                model: User,
+                model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'username', 'nickname', 'avatar'],
+                attributes: ['id', 'name', 'website', 'avatar'],
               },
               {
                 model: Comment,
                 as: 'replyTo',
                 include: [
                   {
-                    model: User,
+                    model: CommentUser,
                     as: 'user',
-                    attributes: ['id', 'username', 'nickname'],
+                    attributes: ['id', 'name'],
                   },
                 ],
               },
@@ -390,8 +606,8 @@ class CommentService {
         offset,
         limit: size,
         order: [
-          // ['likes', 'DESC'], // 按点赞数排序
           ['createdAt', 'DESC'], // 然后按创建时间排序
+          ['likes', 'DESC'], // 按点赞数排序
         ],
       });
 
@@ -407,11 +623,11 @@ class CommentService {
    */
   async getUserComments(
     userId: number,
-    page: number = 1,
-    limit: number = 20
+    current: number = 1,
+    size: number = 20
   ): Promise<{ comments: Comment[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: comments, count: total } = await Comment.findAndCountAll({
         where: {
@@ -426,7 +642,7 @@ class CommentService {
           },
         ],
         offset,
-        limit,
+        limit: size,
         order: [['createdAt', 'DESC']],
       });
 
@@ -438,14 +654,36 @@ class CommentService {
   }
 
   /**
+   * 根据邮箱获取评论用户的评论
+   */
+  async getCommentsByEmail(
+    email: string,
+    current: number = 1,
+    size: number = 20
+  ): Promise<{ comments: Comment[]; total: number }> {
+    try {
+      // 先找评论用户
+      const commentUser = await CommentUser.findOne({ where: { email } });
+      if (!commentUser) {
+        return { comments: [], total: 0 };
+      }
+
+      return this.getUserComments(commentUser.id, current, size);
+    } catch (error) {
+      logger.error('根据邮箱获取评论失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 获取待审核的评论
    */
   async getPendingComments(
-    page: number = 1,
-    limit: number = 20
+    current: number = 1,
+    size: number = 20
   ): Promise<{ comments: Comment[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: comments, count: total } = await Comment.findAndCountAll({
         where: {
@@ -453,9 +691,9 @@ class CommentService {
         },
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'avatar'],
+            attributes: ['id', 'name', 'website', 'avatar'],
           },
           {
             model: Blog,
@@ -464,7 +702,7 @@ class CommentService {
           },
         ],
         offset,
-        limit,
+        limit: size,
         order: [['createdAt', 'ASC']], // 按创建时间升序，先审核早的
       });
 
@@ -578,11 +816,11 @@ class CommentService {
    */
   async searchComments(
     keyword: string,
-    page: number = 1,
-    limit: number = 20
+    current: number = 1,
+    size: number = 20
   ): Promise<{ comments: Comment[]; total: number }> {
     try {
-      const offset = (page - 1) * limit;
+      const offset = (current - 1) * size;
 
       const { rows: comments, count: total } = await Comment.findAndCountAll({
         where: {
@@ -590,9 +828,16 @@ class CommentService {
         },
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'avatar'],
+            attributes: ['id', 'name', 'email', 'avatar'],
+            where: {
+              [Op.or]: [
+                { name: { [Op.like]: `%${keyword}%` } },
+                { email: { [Op.like]: `%${keyword}%` } },
+              ],
+            },
+            required: false,
           },
           {
             model: Blog,
@@ -601,7 +846,7 @@ class CommentService {
           },
         ],
         offset,
-        limit,
+        limit: size,
         order: [['createdAt', 'DESC']],
       });
 
@@ -624,9 +869,9 @@ class CommentService {
         },
         include: [
           {
-            model: User,
+            model: CommentUser,
             as: 'user',
-            attributes: ['id', 'username', 'avatar'],
+            attributes: ['id', 'name', 'email', 'avatar'],
           },
           {
             model: Blog,
@@ -646,38 +891,27 @@ class CommentService {
   }
 
   /**
-   * 添加博客评论
+   * 批量创建评论（用于导入数据）
    */
-  async addComment(blogId: number, userId: number, content: string, parentId?: number) {
-    try {
-      // 检查博客是否存在
-      const blog = await Blog.findByPk(blogId);
-      if (!blog) {
-        throw new AppError('博客不存在', 404);
-      }
+  async bulkCreateComments(
+    comments: Array<{
+      blogId: number;
+      userData: {
+        name: string;
+        email: string;
+        website?: string;
+      };
+      content: string;
+    }>
+  ): Promise<Comment[]> {
+    const results: Comment[] = [];
 
-      // 如果有关联的父评论，检查父评论是否存在
-      if (parentId) {
-        const parentComment = await Comment.findByPk(parentId);
-        if (!parentComment) {
-          throw new AppError('父评论不存在', 404);
-        }
-      }
-
-      const comment = await Comment.create({
-        blogId,
-        userId,
-        content,
-        parentId,
-        status: 'pending', // 默认需要审核
-      });
-
-      logger.info(`用户 ${userId} 为博客 ${blogId} 添加评论`);
-      return comment;
-    } catch (error) {
-      logger.error('添加评论失败:', error);
-      throw error;
+    for (const item of comments) {
+      const comment = await this.createComment(item.blogId, item.userData, item.content);
+      results.push(comment);
     }
+
+    return results;
   }
 }
 

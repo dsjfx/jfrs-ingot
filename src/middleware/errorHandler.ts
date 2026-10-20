@@ -158,7 +158,7 @@ export class ForbiddenError extends AppError {
  */
 export class NotFoundError extends AppError {
   constructor(resource: string) {
-    super(`${resource}不存在`, HttpStatus.NotFound, getDefaultCode(HttpStatus.NotFound));
+    super(`${resource}`, HttpStatus.NotFound, getDefaultCode(HttpStatus.NotFound));
   }
 }
 

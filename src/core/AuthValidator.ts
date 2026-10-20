@@ -59,7 +59,7 @@ export const loginSchema = Joi.object({
     'string.required': '缺少验证码id',
   }),
 
-  appType: Joi.string().valid('blog', 'admin').required().messages({
+  appType: Joi.string().valid('daily', 'note', 'admin').required().messages({
     'string.required': '缺少 app 类型',
   }),
 

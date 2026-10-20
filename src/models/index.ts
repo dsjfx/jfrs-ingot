@@ -8,11 +8,34 @@ import Category from './Category';
 import Tag from './Tag';
 import BlogTag from './BlogTag';
 import Comment from './Comment';
+import CommentUser from './CommentUser';
+import CommentReport from './CommentReport';
+import CommentBlock from './CommentBlock';
+import CommentBlockPersonal from './CommentBlockPersonal';
 import Photo from './Photo';
 
-sequelize.addModels([User, Blog, Category, Tag, BlogTag, Comment, Photo]);
+/**
+ * 初始化所有模型并设置关联关系
+ * Initialize all models and set up associations
+ */
+sequelize.addModels([
+  User,
+  Blog,
+  Category,
+  Tag,
+  BlogTag,
+  Comment,
+  CommentUser,
+  CommentReport,
+  CommentBlock,
+  CommentBlockPersonal,
+  Photo,
+]);
 
-// 模型关联
+/**
+ * 设置模型之间的关联关系
+ * Set up associations between models
+ */
 User.hasMany(Blog, { foreignKey: 'authorId' });
 Blog.belongsTo(User, { foreignKey: 'authorId' });
 
@@ -23,8 +46,8 @@ Blog.belongsToMany(Tag, { through: BlogTag, foreignKey: 'blogId' });
 Tag.belongsToMany(Blog, { through: BlogTag, foreignKey: 'tagId' });
 
 // 评论关联
-User.hasMany(Comment, { foreignKey: 'userId' });
-Comment.belongsTo(User, { foreignKey: 'userId' });
+CommentUser.hasMany(Comment, { foreignKey: 'userId' });
+Comment.belongsTo(CommentUser, { foreignKey: 'userId' });
 
 Blog.hasMany(Comment, { foreignKey: 'blogId' });
 Comment.belongsTo(Blog, { foreignKey: 'blogId' });
@@ -39,6 +62,49 @@ Comment.belongsTo(Comment, { foreignKey: 'replyToId' });
 // Blog.hasMany(Photo, { foreignKey: 'blogId', as: 'photos' });
 // Photo.belongsTo(Blog, { foreignKey: 'blogId', as: 'blog' });
 
-export { sequelize, Op, User, Blog, Category, Tag, BlogTag, Comment, Photo };
+// 举报关联
+// Comment.hasMany(CommentReport, { foreignKey: 'commentId', as: 'reports' });
+// CommentReport.belongsTo(Comment, { foreignKey: 'commentId', as: 'comment' });
 
-export default { User, Blog, Category, Tag, BlogTag, Comment, Photo };
+// CommentUser.hasMany(CommentReport, { foreignKey: 'reporterId', as: 'reports' });
+// CommentReport.belongsTo(CommentUser, { foreignKey: 'reporterId', as: 'reporter' });
+
+// User.hasMany(CommentReport, { foreignKey: 'handledBy', as: 'handledReports' });
+// CommentReport.belongsTo(User, { foreignKey: 'handledBy', as: 'handler' });
+
+// 屏蔽关联
+// CommentReport.hasMany(CommentBlock, { foreignKey: 'reportId', as: 'blocks' });
+// CommentBlock.belongsTo(CommentReport, { foreignKey: 'reportId', as: 'report' });
+
+// User.hasMany(CommentBlock, { foreignKey: 'createdBy', as: 'createdBlocks' });
+// CommentBlock.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+
+export {
+  sequelize,
+  Op,
+  User,
+  Blog,
+  Category,
+  Tag,
+  BlogTag,
+  Comment,
+  CommentUser,
+  CommentReport,
+  CommentBlock,
+  CommentBlockPersonal,
+  Photo,
+};
+
+export default {
+  User,
+  Blog,
+  Category,
+  Tag,
+  BlogTag,
+  Comment,
+  CommentUser,
+  CommentReport,
+  CommentBlock,
+  CommentBlockPersonal,
+  Photo,
+};

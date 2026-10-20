@@ -31,6 +31,15 @@ export interface RefreshTokenResponse {
   tokenType: 'Bearer';
 }
 
+export interface BriefUser {
+  id: number;
+  username: string;
+  nickname: string | undefined;
+  email: string;
+  role: string;
+  avatar?: string;
+}
+
 export default {
   TokenPayload,
   RefreshTokenResponse,

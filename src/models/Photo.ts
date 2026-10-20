@@ -143,6 +143,35 @@ class Photo extends Model {
   })
   blogId!: number;
 
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+    comment: '拍摄地点名称',
+  })
+  location!: string;
+
+  @Column({
+    type: DataType.DECIMAL(10, 7),
+    allowNull: true,
+    comment: '经度',
+    validate: {
+      min: -180,
+      max: 180,
+    },
+  })
+  longitude!: number;
+
+  @Column({
+    type: DataType.DECIMAL(10, 7),
+    allowNull: true,
+    comment: '纬度',
+    validate: {
+      min: -90,
+      max: 90,
+    },
+  })
+  latitude!: number;
+
   @BelongsTo(() => Blog)
   blog!: Blog;
 }

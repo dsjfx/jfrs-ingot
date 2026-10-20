@@ -7,8 +7,8 @@ import {
   BelongsTo,
   HasMany,
 } from 'sequelize-typescript';
-import User from './User';
 import Blog from './Blog';
+import CommentUser from './CommentUser';
 
 @Table({
   tableName: 'ingot_comment',
@@ -50,10 +50,11 @@ class Comment extends Model {
   })
   parentId?: number;
 
-  @ForeignKey(() => User)
+  @ForeignKey(() => CommentUser)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
+    comment: '评论用户ID',
   })
   userId!: number;
 
@@ -65,8 +66,8 @@ class Comment extends Model {
   blogId!: number;
 
   // 关联关系
-  @BelongsTo(() => User)
-  user!: User;
+  @BelongsTo(() => CommentUser, { foreignKey: 'userId', as: 'user' })
+  user!: CommentUser;
 
   @BelongsTo(() => Blog)
   blog!: Blog;
@@ -88,6 +89,14 @@ class Comment extends Model {
     as: 'replies',
   })
   replies?: Comment[];
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  isReported!: boolean;
+
+  @Column({ type: DataType.VIRTUAL })
+  isBlocked!: boolean; // 当前访客是否屏蔽了该评论作者
 }
 
 export default Comment;

@@ -27,6 +27,8 @@ router.get('/sys-avatar', authApi.getSystemAvatar);
  */
 router.get('/profile/simple', authApi.getSimpleProfile);
 
+router.get('/email', authApi.getUserByEmail);
+
 // 需要认证的路由
 router.use(authenticateToken); // 以下所有路由都需要认证
 

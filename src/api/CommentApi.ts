@@ -5,17 +5,35 @@ import CommentService from '../services/CommentService';
 import logger from '../utils/logger';
 import { ResponseFactory } from '../utils/ResponseFactory';
 import { AppError } from '../middleware/errorHandler';
+import CommentUserService from '@/services/CommentUserService';
 
 class CommentApi {
   // 验证模式
   static createSchema = Joi.object({
-    content: Joi.string().min(1).max(1000).required(),
+    content: Joi.string().min(1).max(2000).required().messages({
+      'string.min': '评论内容不能为空',
+      'string.max': '评论内容不能超过2000个字符',
+      'any.required': '评论内容是必填项',
+    }),
+    name: Joi.string().min(1).max(50).required().messages({
+      'string.min': '昵称不能为空',
+      'string.max': '昵称不能超过50个字符',
+      'any.required': '昵称是必填项',
+    }),
+    email: Joi.string().email().max(100).required().messages({
+      'string.email': '请输入有效的邮箱地址',
+      'any.required': '邮箱是必填项',
+    }),
+    website: Joi.string().uri().max(200).optional().messages({
+      'string.uri': '请输入有效的网址',
+    }),
     parentId: Joi.number().integer().positive().optional(),
     replyToId: Joi.number().integer().positive().optional(),
+    status: Joi.string().valid('pending', 'approved', 'rejected').optional(),
   });
 
   static updateSchema = Joi.object({
-    content: Joi.string().min(1).max(1000).required(),
+    content: Joi.string().min(1).max(2000).required(),
     status: Joi.string().valid('pending', 'approved', 'rejected').optional(),
   });
 
@@ -24,31 +42,91 @@ class CommentApi {
     size: Joi.number().integer().min(1).max(100).default(10),
     blogId: Joi.number().integer().positive().required(),
     sort: Joi.string().optional(),
+    viewerId: Joi.string().optional(),
+    viewerEmail: Joi.string().optional(),
   }).unknown(true);
+
+  /**
+   * 获取评论用户列表（管理员）
+   */
+  async getCommentUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 20;
+      const search = req.query.search as string;
+      const sortBy = (req.query.sortBy as string) || 'createdAt';
+      const sortOrder = (req.query.sortOrder as 'ASC' | 'DESC') || 'DESC';
+
+      const { users, total } = await CommentUserService.getCommentUsers({
+        current,
+        size,
+        search,
+        sortBy,
+        sortOrder,
+      });
+
+      res.json(
+        ResponseFactory.page(users, { current, size, total: total }, '获取评论用户列表成功')
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 根据邮箱查询评论用户
+   */
+  async getCommentUserByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.query;
+
+      if (!email) {
+        throw new AppError('请提供邮箱地址', 400);
+      }
+
+      const commentUser = await CommentUserService.findByEmail(email as string);
+
+      if (!commentUser) {
+        throw new AppError('评论用户不存在', 404);
+      }
+
+      res.json(ResponseFactory.success(commentUser.toPublicJSON(), '获取评论用户成功'));
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * 创建评论
    */
   async createComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // 验证请求数据
+      const { error, value } = CommentApi.createSchema.validate(req.body);
+      if (error) {
+        throw new AppError(error.details[0].message, 400);
+      }
       const blogId = parseInt(req.params.id as string, 10);
-      const userId = req.user?.id;
-
-      if (!userId) {
-        throw new AppError('未认证的用户', 401);
+      if (isNaN(blogId)) {
+        throw new AppError('无效的博客ID', 400);
       }
 
-      const { content, parentId, replyToId } = req.body;
+      // 获取客户端信息
+      const ip = req.ip || req.socket.remoteAddress || '';
+      const userAgent = req.get('user-agent') || '';
+
+      const { name, email, website, content, parentId, replyToId, status } = value;
 
       const comment = await CommentService.createComment(
         blogId,
-        userId,
+        { name, email, website, ip, userAgent },
         content,
         parentId,
-        replyToId
+        replyToId,
+        status
       );
 
-      logger.info(`用户 ${req.user?.username} 为博客 ${blogId} 创建评论`);
+      logger.info(`用户 ${name} 为博客 ${blogId} 创建评论`);
 
       res.json(ResponseFactory.success(comment, '评论创建成功，等待审核'));
     } catch (error) {
@@ -61,12 +139,16 @@ class CommentApi {
    */
   async updateComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const commentId = parseInt(req.params.commentId as string, 10);
-      const userId = req.user?.id;
+      const commentId = parseInt(req.params.id as string, 10);
+      let userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (!userId || !userRole) {
-        throw new AppError('未认证的用户', 401);
+      if (!userId) {
+        userId = req.body.userId;
+      }
+
+      if (!userId && !userRole) {
+        throw new AppError('未认证或登记的用户', 401);
       }
 
       const comment = await CommentService.updateComment(commentId, req.body, userId, userRole);
@@ -82,11 +164,15 @@ class CommentApi {
    */
   async deleteComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const commentId = parseInt(req.params.commentId as string, 10);
-      const userId = req.user?.id;
+      const commentId = parseInt(req.params.id as string, 10);
+      let userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (!userId || !userRole) {
+      if (!userId) {
+        userId = req.query.userId;
+      }
+
+      if (!userId && !userRole) {
         throw new AppError('未认证的用户', 401);
       }
 
@@ -104,10 +190,14 @@ class CommentApi {
   async likeComment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const commentId = parseInt(req.params.commentId as string, 10);
-      const userId = req.user?.id;
+      let userId = req.user?.id;
 
       if (!userId) {
-        throw new AppError('未认证的用户', 401);
+        userId = req.query.userId;
+      }
+
+      if (!userId) {
+        throw new AppError('未认证或登记的用户', 401);
       }
 
       const comment = await CommentService.likeComment(commentId, userId);
@@ -180,13 +270,12 @@ class CommentApi {
         throw new AppError(error.details[0].message, 400);
       }
 
-      const { current, size, ...filters } = value;
-      // const page = parseInt(req.query.page as string, 10) || 1;
-      // const limit = parseInt(req.query.limit as string, 10) || 10;
+      const { current, size, viewerId, viewerEmail, ...filters } = value;
 
-      // console.log(current, size, filters);
-
-      const { comments, total } = await CommentService.getComments(current, size, filters);
+      const { comments, total } = await CommentService.getComments(current, size, filters, {
+        viewerId,
+        viewerEmail,
+      });
 
       res.json(ResponseFactory.page(comments, { current, size, total }, '查询评论成功'));
     } catch (error) {
@@ -226,10 +315,6 @@ class CommentApi {
 
       const comments = await CommentService.getPopularComments(limit);
 
-      // res.json({
-      //   success: true,
-      //   data: comments,
-      // });
       res.json(ResponseFactory.success(comments, '获取热门评论成功'));
     } catch (error) {
       next(error);
@@ -245,15 +330,11 @@ class CommentApi {
   async searchComments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const keyword = req.query.keyword as string;
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 10;
 
-      const comments = await CommentService.searchComments(keyword, page, limit);
+      const comments = await CommentService.searchComments(keyword, current, size);
 
-      // res.json({
-      //   success: true,
-      //   data: comments,
-      // });
       res.json(ResponseFactory.success(comments, '搜索评论成功'));
     } catch (error) {
       next(error);
@@ -284,15 +365,11 @@ class CommentApi {
   async getUserComments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = parseInt(req.query.userId as string, 10);
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const current = parseInt(req.query.current as string, 10) || 1;
+      const size = parseInt(req.query.size as string, 10) || 10;
 
-      const comments = await CommentService.getUserComments(userId, page, limit);
+      const comments = await CommentService.getUserComments(userId, current, size);
 
-      // res.json({
-      //   success: true,
-      //   data: comments,
-      // });
       res.json(ResponseFactory.success(comments, '获取用户评论成功'));
     } catch (error) {
       next(error);
@@ -320,10 +397,6 @@ class CommentApi {
 
       const count = CommentService.bulkModerateComments(commentIds, status);
 
-      // res.json({
-      //   success: true,
-      //   data: count,
-      // });
       res.json(ResponseFactory.success(count, '批量更新评论成功'));
     } catch (error) {
       next(error);
@@ -334,10 +407,6 @@ class CommentApi {
     try {
       const stats = CommentService.getCommentStats();
 
-      // res.json({
-      //   success: true,
-      //   data: stats,
-      // });
       res.json(ResponseFactory.success(stats, '获取评论统计成功'));
     } catch (error) {
       next(error);

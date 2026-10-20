@@ -16,7 +16,7 @@ export const validate = (schema: Joi.ObjectSchema) => {
         message: detail.message,
       }));
 
-      logger.warn('请求验证失败:', errors);
+      logger.warn('请求验证失败: %o', errors);
       res.status(400).json({ errors });
       return;
     }

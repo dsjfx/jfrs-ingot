@@ -78,6 +78,13 @@ class Blog extends Model {
   coverThumbnail?: string;
 
   @Column({
+    type: DataType.STRING(100),
+    allowNull: true,
+    comment: '地点',
+  })
+  location?: string;
+
+  @Column({
     type: DataType.ENUM('draft', 'published', 'archived'),
     defaultValue: 'draft',
   })

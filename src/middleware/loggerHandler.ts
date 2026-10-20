@@ -55,8 +55,8 @@ export const responseTime = (req: Request, res: Response, next: NextFunction): v
     const duration = Date.now() - startTime;
 
     // 记录慢请求
-    if (duration > 1000) {
-      // 超过1秒的请求
+    if (duration > 10000) {
+      // 超过10秒的请求
       logger.warn('Slow request detected', {
         method: req.method,
         url: req.originalUrl,
