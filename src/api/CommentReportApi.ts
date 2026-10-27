@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import CommentReportService from '../services/CommentReportService';
 import { AppError } from '../middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class CommentReportApi {
   // 举报验证模式

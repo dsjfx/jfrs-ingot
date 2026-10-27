@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import CommentBlockPersonalService from '@/services/CommentBlockPersonalService';
-import { AppError } from '@/middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import CommentBlockPersonalService from '../services/CommentBlockPersonalService';
+import { AppError } from '../middleware/errorHandler';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class CommentBlockPersonalApi {
   /**

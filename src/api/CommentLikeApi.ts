@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import CommentLikeService from '../services/CommentLikeService';
 import { AppError } from '../middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class CommentLikeApi {
   static toggleSchema = Joi.object({

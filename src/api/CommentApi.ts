@@ -5,7 +5,7 @@ import CommentService from '../services/CommentService';
 import logger from '../utils/logger';
 import { ResponseFactory } from '../utils/ResponseFactory';
 import { AppError } from '../middleware/errorHandler';
-import CommentUserService from '@/services/CommentUserService';
+import CommentUserService from '../services/CommentUserService';
 
 class CommentApi {
   // 验证模式

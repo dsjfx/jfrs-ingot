@@ -11,7 +11,7 @@ import {
   UserProfile,
   UserRegister,
 } from '../types/user';
-import { BriefUser } from '@/types/auth';
+import { BriefUser } from '../types/auth';
 
 class AuthService {
   /**
