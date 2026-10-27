@@ -2,7 +2,8 @@ import { Router } from 'express';
 import CommentApi from '../api/CommentApi';
 import CommentReportApi from '../api/CommentReportApi';
 import CommentBlockApi from '../api/CommentBlockApi';
-import CommentBlockPersonalApi from '@/api/CommentBlockPersonalApi';
+import CommentBlockPersonalApi from '../api/CommentBlockPersonalApi';
+import CommentLikeApi from '../api/CommentLikeApi';
 import { authenticateToken, authorizeRoles } from '../middleware/authority';
 import { validate } from '../middleware/validation';
 
@@ -16,6 +17,8 @@ const blockApi = new CommentBlockApi();
 
 const blockPersonalApi = new CommentBlockPersonalApi();
 
+const likeApi = new CommentLikeApi();
+
 // 公共路由
 router.get('/list', commentApi.getComments);
 router.get('/blog', commentApi.getBlogsComments);
@@ -25,30 +28,32 @@ router.get('/view/:id', commentApi.getCommentById);
 router.get('/user', commentApi.getCommentUserByEmail);
 
 router.post('/add/:id', validate(CommentApi.createSchema), commentApi.createComment);
-
 router.put('/update/:id', validate(CommentApi.updateSchema), commentApi.updateComment);
-
 router.delete('/delete/:id', commentApi.deleteComment);
-
-router.post('/like/:id', commentApi.likeComment);
 
 // 用户相关的评论
 router.get('/user/comments', commentApi.getUserComments);
-
 // 举报评论（无需登录）
 router.post('/reports', validate(CommentReportApi.reportSchema), reportApi.reportComment);
 
 // 检查是否被屏蔽（无需登录）
 router.get('/blocks/check', blockApi.checkBlocked);
-
 // 个人屏蔽相关路由（无需登录，前端可根据用户ID获取）
 router.post('/blocks/personal', blockPersonalApi.block);
-
 // 取消个人屏蔽
 router.delete('/blocks/personal', blockPersonalApi.unblock);
-
 // 获取我的屏蔽列表（无需登录，前端可根据用户ID获取）
 router.get('/blocks/personal', blockPersonalApi.getBlocks);
+
+router.post('/like/:id', commentApi.likeComment);
+// 点赞（无需登录，凭 anonymousId 或 userId）
+router.post('/likes/toggle', likeApi.toggleLike);
+// 单条评论点赞状态
+router.get('/likes/:commentId/status', likeApi.getStatus);
+// 批量查询
+router.post('/likes/batch-status', likeApi.getBatchStatus);
+// 我点赞的评论
+router.get('/likes/my', likeApi.getLikes);
 
 router.use(authenticateToken); // 以下所有路由都需要认证
 

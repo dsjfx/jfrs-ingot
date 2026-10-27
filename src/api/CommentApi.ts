@@ -27,8 +27,10 @@ class CommentApi {
     website: Joi.string().uri().max(200).optional().messages({
       'string.uri': '请输入有效的网址',
     }),
-    parentId: Joi.number().integer().positive().optional(),
-    replyToId: Joi.number().integer().positive().optional(),
+    // parentId: Joi.number().integer().positive().optional(),
+    // replyToId: Joi.number().integer().positive().optional(),
+    // 前端只传"被回复的评论ID"
+    replyToCommentId: Joi.number().integer().positive().optional(),
     status: Joi.string().valid('pending', 'approved', 'rejected').optional(),
   });
 
@@ -115,16 +117,15 @@ class CommentApi {
       const ip = req.ip || req.socket.remoteAddress || '';
       const userAgent = req.get('user-agent') || '';
 
-      const { name, email, website, content, parentId, replyToId, status } = value;
+      const { name, email, website, content, replyToCommentId, status } = value;
 
-      const comment = await CommentService.createComment(
+      const comment = await CommentService.createComment({
         blogId,
-        { name, email, website, ip, userAgent },
+        userData: { name, email, website, ip, userAgent },
         content,
-        parentId,
-        replyToId,
-        status
-      );
+        replyToCommentId,
+        status,
+      });
 
       logger.info(`用户 ${name} 为博客 ${blogId} 创建评论`);
 

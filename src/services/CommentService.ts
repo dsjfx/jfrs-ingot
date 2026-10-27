@@ -1,30 +1,53 @@
 import { Op, WhereOptions } from 'sequelize';
 import { Comment, CommentUser, Blog, CommentReport, sequelize } from '../models';
 import CommentUserService from './CommentUserService';
-import type { CommentFilters, ViewerContext } from '../types';
+import type { CommentFilters } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 import CommentBlockService from './CommentBlockService';
-import CommentBlockPersonal from '@/models/CommentBlockPersonal';
+import CommentLikeService from './CommentLikeService';
+import CommentBlockPersonal from '../models/CommentBlockPersonal';
+
+/**
+ * 评论查看者上下文
+ * 用于判断当前访客是否屏蔽了评论作者
+ * Context for the viewer of the comments, used to determine if the
+ * current visitor has blocked the comment author.
+ */
+interface ViewerContext {
+  viewerId?: number; // 当前访客的评论用户ID
+  viewerEmail?: string; // 或者用邮箱
+  userId?: string; // 登录用户ID
+  anonymousId?: string; // 访客匿名ID
+}
+
+interface GetCommentsOptions {
+  filterBlocked?: boolean; // 是否过滤被屏蔽的评论
+  topLevelOnly?: boolean; // 是否只查顶级评论（默认 true）
+  maxReplyDepth?: number; // 回复的最大嵌套深度（默认 2 层）
+}
+
+interface CreateCommentInput {
+  blogId: number;
+  userData: {
+    name: string;
+    email: string;
+    website?: string;
+    ip?: string;
+    userAgent?: string;
+  };
+  content: string;
+  // 前端只传这个：被回复的评论ID
+  replyToCommentId?: number;
+  status: 'pending' | 'approved' | 'rejected';
+}
 
 class CommentService {
   /**
    * 创建评论
    */
-  async createComment(
-    blogId: number,
-    userData: {
-      name: string;
-      email: string;
-      website?: string;
-      ip?: string;
-      userAgent?: string;
-    },
-    content: string,
-    parentId?: number,
-    replyToId?: number,
-    status: 'pending' | 'approved' | 'rejected' = 'pending'
-  ): Promise<Comment> {
+  async createComment(input: CreateCommentInput): Promise<Comment> {
+    const { blogId, userData, content, replyToCommentId, status = 'pending' } = input;
     const transaction = await Comment.sequelize!.transaction();
 
     try {
@@ -66,6 +89,34 @@ class CommentService {
         throw new AppError('博客不存在', 404);
       }
 
+      // 计算 parentId 和 replyToId
+      let parentId: number | null = null;
+      let replyToId: number | null = null;
+
+      if (replyToCommentId) {
+        // 查找被回复的评论
+        const replyToComment = await Comment.findByPk(replyToCommentId, { transaction });
+
+        if (!replyToComment) {
+          throw new AppError('被回复的评论不存在', 404);
+        }
+
+        if (replyToComment.blogId !== blogId) {
+          throw new AppError('被回复的评论不属于该博客', 400);
+        }
+
+        if (replyToComment.status !== 'approved') {
+          throw new AppError('只能回复已审核通过的评论', 400);
+        }
+
+        // 关键逻辑：
+        // - replyToId = 被回复的评论ID（直接回复对象）
+        // - parentId = 被回复评论的 parentId（如果有），否则就是被回复评论本身
+        //   这样保证所有回复都挂在顶级评论下
+        replyToId = replyToCommentId;
+        parentId = replyToComment.parentId ?? replyToCommentId;
+      }
+
       // 验证父评论是否存在（如果是回复）
       if (parentId) {
         const parentComment = await Comment.findByPk(parentId, { transaction });
@@ -79,18 +130,18 @@ class CommentService {
         }
       }
 
-      // 验证回复的评论是否存在（如果是回复特定评论）
-      if (replyToId) {
-        const replyToComment = await Comment.findByPk(replyToId, { transaction });
-        if (!replyToComment) {
-          throw new AppError('回复的评论不存在', 404);
-        }
+      // // 验证回复的评论是否存在（如果是回复特定评论）
+      // if (replyToId) {
+      //   const replyToComment = await Comment.findByPk(replyToId, { transaction });
+      //   if (!replyToComment) {
+      //     throw new AppError('回复的评论不存在', 404);
+      //   }
 
-        // 确保回复的评论属于同一博客
-        if (replyToComment.blogId !== blogId) {
-          throw new AppError('回复的评论不属于该博客', 400);
-        }
-      }
+      //   // 确保回复的评论属于同一博客
+      //   if (replyToComment.blogId !== blogId) {
+      //     throw new AppError('回复的评论不属于该博客', 400);
+      //   }
+      // }
 
       const comment = await Comment.create(
         {
@@ -112,7 +163,15 @@ class CommentService {
       logger.info(`评论创建成功: ID=${comment.id}, 博客ID=${blogId}, 用户ID=${commentUser.id}`);
 
       return (await Comment.findByPk(comment.id, {
-        include: [{ model: CommentUser, as: 'user' }],
+        include: [
+          { model: CommentUser, as: 'user' },
+          {
+            model: Comment,
+            as: 'replyTo',
+            include: [{ model: CommentUser, as: 'user' }],
+            required: false,
+          },
+        ],
       })) as Comment;
     } catch (error) {
       await transaction.rollback();
@@ -286,6 +345,7 @@ class CommentService {
 
   /**
    * 点赞评论
+   * @deprecated
    */
   async likeComment(commentId: number, userId: number): Promise<Comment> {
     try {
@@ -329,34 +389,28 @@ class CommentService {
     current: number = 1,
     size: number = 20,
     filters: CommentFilters = {},
-    viewer?: ViewerContext
+    viewer?: ViewerContext,
+    options: GetCommentsOptions = {}
   ): Promise<{ comments: Comment[]; total: number }> {
     try {
+      const { filterBlocked = true, topLevelOnly = true } = options;
+
       const offset = (current - 1) * size;
       const where: WhereOptions = {};
 
-      if (filters.blogId) {
-        where.blogId = filters.blogId;
-      }
+      // 其他过滤条件
+      if (filters.status) where.status = filters.status;
+      if (filters.blogId) where.blogId = filters.blogId;
+      if (filters.userId) where.userId = filters.userId;
+      if (filters.search) where.content = { [Op.like]: `%${filters.search}%` };
 
-      if (filters.status) {
-        where.status = filters.status;
-      }
-
-      if (filters.userId) {
-        where.userId = filters.userId;
-      }
-
-      if (filters.parentId !== undefined) {
-        where.parentId = filters.parentId;
-      }
-
-      if (filters.search) {
-        where.content = { [Op.like]: `%${filters.search}%` };
+      // 只查询顶级评论（parentId 为 null）
+      if (topLevelOnly) {
+        where.parentId = null;
       }
 
       // 如果有访客身份，排除被该访客屏蔽的用户
-      if (viewer?.viewerId) {
+      if (filterBlocked && viewer?.viewerId) {
         // 查出当前访客屏蔽的所有用户ID
         const personalBlocks = await CommentBlockPersonal.findAll({
           where: { blockerId: viewer.viewerId },
@@ -385,17 +439,7 @@ class CommentService {
             as: 'blog',
             attributes: ['id', 'title'],
           },
-          {
-            model: Comment,
-            as: 'replyTo',
-            include: [
-              {
-                model: CommentUser,
-                as: 'user',
-                attributes: ['id', 'name', 'avatar'],
-              },
-            ],
-          },
+          // 递归加载回复
           {
             model: Comment,
             as: 'replies',
@@ -403,26 +447,84 @@ class CommentService {
               {
                 model: CommentUser,
                 as: 'user',
-                attributes: ['id', 'name', 'avatar'],
+                attributes: ['id', 'name', 'email', 'website', 'avatar'],
+              },
+              {
+                model: Comment,
+                as: 'replyTo',
+                include: [{ model: CommentUser, as: 'user', attributes: ['id', 'name'] }],
+                required: false,
+              },
+              // 二级回复（回复的回复）
+              {
+                model: Comment,
+                as: 'replies',
+                include: [
+                  {
+                    model: CommentUser,
+                    as: 'user',
+                    attributes: ['id', 'name', 'avatar'],
+                  },
+                  {
+                    model: Comment,
+                    as: 'replyTo',
+                    include: [{ model: CommentUser, as: 'user', attributes: ['id', 'name'] }],
+                    required: false,
+                  },
+                ],
+                where: { status: 'approved' },
+                required: false,
+                separate: true,
+                order: [['createdAt', 'ASC']],
               },
             ],
             where: { status: 'approved' },
             required: false,
-            separate: true, // 单独查询，避免重复数据
+            separate: true,
+            order: [['createdAt', 'ASC']],
           },
+          // {
+          //   model: Comment,
+          //   as: 'replyTo',
+          //   include: [
+          //     {
+          //       model: CommentUser,
+          //       as: 'user',
+          //       attributes: ['id', 'name', 'avatar'],
+          //     },
+          //   ],
+          // },
+          // {
+          //   model: Comment,
+          //   as: 'replies',
+          //   include: [
+          //     {
+          //       model: CommentUser,
+          //       as: 'user',
+          //       attributes: ['id', 'name', 'avatar'],
+          //     },
+          //   ],
+          //   where: { status: 'approved' },
+          //   required: false,
+          //   separate: true, // 单独查询，避免重复数据
+          //   order: [['createdAt', 'ASC']],
+          // },
         ],
         offset,
         limit: size,
         order: [['createdAt', 'DESC']],
+        distinct: true, // 避免 JOIN 导致计数重复
       });
 
       // 附加举报信息
       await this.attachReportInfo(comments);
 
       // 附加"是否已被当前访客屏蔽"的信息
-      if (viewer?.viewerId) {
+      if (!filterBlocked && viewer?.viewerId) {
         await this.attachBlockStatus(comments, viewer.viewerId);
       }
+
+      await this.attachLikeStatus(comments, viewer);
 
       return { comments, total };
     } catch (error) {
@@ -434,16 +536,17 @@ class CommentService {
   /**
    * 为评论列表附加举报信息
    */
-  private async attachReportInfo(comments: Comment[]): Promise<void> {
+  private async attachReportInfo(comments: Comment[], recursive = false): Promise<void> {
     if (comments.length === 0) return;
 
     // 收集所有评论ID（包括回复）
     const commentIds: number[] = [];
+
     const collectIds = (list: Comment[]) => {
       list.forEach(c => {
         commentIds.push(c.id);
-        if (c.replies) {
-          collectIds(c.replies);
+        if (recursive && (c as any).replies) {
+          collectIds((c as any).replies);
         }
       });
     };
@@ -451,84 +554,74 @@ class CommentService {
 
     if (commentIds.length === 0) return;
 
-    // 一次性统计所有评论的举报数（按状态分组）
-    const reportStats = (await CommentReport.findAll({
+    // 批量查询举报统计
+    const stats = (await CommentReport.findAll({
       attributes: ['commentId', 'status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-      where: {
-        commentId: { [Op.in]: commentIds },
-      },
+      where: { commentId: { [Op.in]: commentIds } },
       group: ['commentId', 'status'],
       raw: true,
     })) as any[];
 
-    // 构建映射：commentId -> { total, pending, resolved, rejected, ignored }
-    const reportMap = new Map<
-      number,
-      {
-        total: number;
-        pending: number;
-        resolved: number;
-        rejected: number;
-        ignored: number;
+    // 构建 Map
+    const map = new Map<number, any>();
+    for (const s of stats) {
+      const count = parseInt(s.count, 10);
+      if (!map.has(s.commentId)) {
+        map.set(s.commentId, { total: 0, pending: 0, resolved: 0, rejected: 0, ignored: 0 });
       }
-    >();
+      const info = map.get(s.commentId);
+      info.total += count;
+      info[s.status] = count;
+    }
 
-    for (const stat of reportStats) {
-      const commentId = stat.commentId;
-      const count = parseInt(stat.count, 10);
-
-      if (!reportMap.has(commentId)) {
-        reportMap.set(commentId, {
+    // 递归附加
+    const attach = (list: Comment[]) => {
+      list.forEach(c => {
+        const info = map.get(c.id) || {
           total: 0,
           pending: 0,
           resolved: 0,
           rejected: 0,
           ignored: 0,
-        });
-      }
+        };
+        c.setDataValue('reportInfo', info);
+        c.setDataValue('isReported', info.total > 0);
 
-      const info = reportMap.get(commentId)!;
-      info.total += count;
-      info[stat.status as keyof typeof info] = count;
-    }
-
-    // 附加到每个评论
-    const attachToComment = (comment: Comment) => {
-      const info = reportMap.get(comment.id);
-
-      (comment as any).reportInfo = info || {
-        total: 0,
-        pending: 0,
-        resolved: 0,
-        rejected: 0,
-        ignored: 0,
-      };
-
-      comment.setDataValue('isReported', (info?.total || 0) > 0);
-
-      // 递归处理回复
-      if ((comment as any).replies) {
-        (comment as any).replies.forEach(attachToComment);
-      }
+        if (recursive && (c as any).replies) {
+          attach((c as any).replies);
+        }
+      });
     };
-
-    comments.forEach(attachToComment);
+    attach(comments);
   }
 
   /**
    * 附加"是否被当前访客屏蔽"信息
    */
-  private async attachBlockStatus(comments: Comment[], viewerId: number) {
+  private async attachBlockStatus(
+    comments: Comment[],
+    viewerId: number,
+    recursive = false
+  ): Promise<void> {
     if (comments.length === 0) return;
 
-    // 收集评论用户ID
-    const commentUserIds = [...new Set(comments.map(c => c.userId))];
+    // 收集所有评论用户ID（包括回复）
+    const userIds: number[] = [];
+    const collectUserIds = (list: Comment[]) => {
+      list.forEach(c => {
+        userIds.push(c.userId);
+        if (recursive && (c as any).replies) {
+          collectUserIds((c as any).replies);
+        }
+      });
+    };
+    collectUserIds(comments);
 
-    // 查询当前访客屏蔽了哪些评论用户
+    // 查询屏蔽关系
     const blocks = await CommentBlockPersonal.findAll({
       where: {
         blockerId: viewerId,
-        blockedId: { [Op.in]: commentUserIds },
+        blockedId: { [Op.in]: [...new Set(userIds)] },
       },
       attributes: ['blockedId'],
       raw: true,
@@ -536,10 +629,45 @@ class CommentService {
 
     const blockedSet = new Set(blocks.map(b => b.blockedId));
 
-    // 附加到评论
-    comments.forEach(comment => {
-      comment.setDataValue('isBlocked', blockedSet.has(comment.userId));
+    // 递归标记
+    const attach = (list: Comment[]) => {
+      list.forEach(c => {
+        c.setDataValue('isBlockedByMe', blockedSet.has(c.userId));
+        if (recursive && (c as any).replies) {
+          attach((c as any).replies);
+        }
+      });
+    };
+    attach(comments);
+  }
+
+  private async attachLikeStatus(comments: Comment[], viewer?: ViewerContext): Promise<void> {
+    if (comments.length === 0) return;
+
+    // 收集所有评论ID（包括回复）
+    const ids: string[] = [];
+    const collect = (list: Comment[]) => {
+      list.forEach(c => {
+        ids.push(String(c.id));
+        if (c.replies?.length) collect(c.replies);
+      });
+    };
+    collect(comments);
+
+    const likeMap = await CommentLikeService.getLikeStatusBatch(ids, {
+      userId: viewer?.userId,
+      anonymousId: viewer?.anonymousId,
     });
+
+    const attach = (list: Comment[]) => {
+      list.forEach(c => {
+        const info = likeMap.get(String(c.id)) || { liked: false, likeCount: 0 };
+        c.likes = info.likeCount;
+        c.isLiked = info.liked;
+        if (c.replies?.length) attach(c.replies);
+      });
+    };
+    attach(comments);
   }
 
   /**
@@ -907,7 +1035,12 @@ class CommentService {
     const results: Comment[] = [];
 
     for (const item of comments) {
-      const comment = await this.createComment(item.blogId, item.userData, item.content);
+      const comment = await this.createComment({
+        blogId: item.blogId,
+        userData: item.userData,
+        content: item.content,
+        status: 'approved',
+      });
       results.push(comment);
     }
 

@@ -12,6 +12,7 @@ import CommentUser from './CommentUser';
 import CommentReport from './CommentReport';
 import CommentBlock from './CommentBlock';
 import CommentBlockPersonal from './CommentBlockPersonal';
+import CommentLike from './CommentLike';
 import Photo from './Photo';
 
 /**
@@ -29,6 +30,7 @@ sequelize.addModels([
   CommentReport,
   CommentBlock,
   CommentBlockPersonal,
+  CommentLike,
   Photo,
 ]);
 
@@ -92,6 +94,7 @@ export {
   CommentReport,
   CommentBlock,
   CommentBlockPersonal,
+  CommentLike,
   Photo,
 };
 
@@ -106,5 +109,6 @@ export default {
   CommentReport,
   CommentBlock,
   CommentBlockPersonal,
+  CommentLike,
   Photo,
 };

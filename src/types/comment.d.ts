@@ -186,17 +186,6 @@ export interface CommentReportData {
   reporterId?: number;
 }
 
-/**
- * 评论查看者上下文
- * 用于判断当前访客是否屏蔽了评论作者
- * Context for the viewer of the comments, used to determine if the
- * current visitor has blocked the comment author.
- */
-export interface ViewerContext {
-  viewerId?: number; // 当前访客的评论用户ID
-  viewerEmail?: string; // 或者用邮箱
-}
-
 export default {
   CommentStatus,
   CommentBase,

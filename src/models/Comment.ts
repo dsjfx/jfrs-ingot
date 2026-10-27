@@ -9,6 +9,7 @@ import {
 } from 'sequelize-typescript';
 import Blog from './Blog';
 import CommentUser from './CommentUser';
+import CommentLike from './CommentLike';
 
 @Table({
   tableName: 'ingot_comment',
@@ -90,13 +91,24 @@ class Comment extends Model {
   })
   replies?: Comment[];
 
+  @HasMany(() => CommentLike, { foreignKey: 'commentId', as: 'clikes' })
+  clikes!: CommentLike[];
+
   @Column({
     type: DataType.VIRTUAL,
   })
   isReported!: boolean;
 
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  reportInfo!: any;
+
   @Column({ type: DataType.VIRTUAL })
   isBlocked!: boolean; // 当前访客是否屏蔽了该评论作者
+
+  @Column({ type: DataType.VIRTUAL })
+  isLiked!: boolean;
 }
 
 export default Comment;
