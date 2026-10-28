@@ -1,5 +1,5 @@
 import { Op, WhereOptions } from 'sequelize';
-import { Comment, CommentUser, Blog, CommentReport, sequelize } from '../models';
+import { Comment, CommentUser, Blog, CommentReport, sequelize, User } from '../models';
 import CommentUserService from './CommentUserService';
 import type { CommentFilters } from '../types';
 import { AppError } from '../middleware/errorHandler';
@@ -391,7 +391,7 @@ class CommentService {
     filters: CommentFilters = {},
     viewer?: ViewerContext,
     options: GetCommentsOptions = {}
-  ): Promise<{ comments: Comment[]; total: number }> {
+  ): Promise<{ comments: Comment[]; total: number; totalWithReplies: number }> {
     try {
       const { filterBlocked = true, topLevelOnly = true } = options;
 
@@ -400,6 +400,7 @@ class CommentService {
 
       // 其他过滤条件
       if (filters.status) where.status = filters.status;
+      else where.status = 'approved';
       if (filters.blogId) where.blogId = filters.blogId;
       if (filters.userId) where.userId = filters.userId;
       if (filters.search) where.content = { [Op.like]: `%${filters.search}%` };
@@ -483,32 +484,6 @@ class CommentService {
             separate: true,
             order: [['createdAt', 'ASC']],
           },
-          // {
-          //   model: Comment,
-          //   as: 'replyTo',
-          //   include: [
-          //     {
-          //       model: CommentUser,
-          //       as: 'user',
-          //       attributes: ['id', 'name', 'avatar'],
-          //     },
-          //   ],
-          // },
-          // {
-          //   model: Comment,
-          //   as: 'replies',
-          //   include: [
-          //     {
-          //       model: CommentUser,
-          //       as: 'user',
-          //       attributes: ['id', 'name', 'avatar'],
-          //     },
-          //   ],
-          //   where: { status: 'approved' },
-          //   required: false,
-          //   separate: true, // 单独查询，避免重复数据
-          //   order: [['createdAt', 'ASC']],
-          // },
         ],
         offset,
         limit: size,
@@ -516,23 +491,108 @@ class CommentService {
         distinct: true, // 避免 JOIN 导致计数重复
       });
 
-      // 附加举报信息
-      await this.attachReportInfo(comments);
+      // 统计含回复的评论总数
+      const totalWithReplies = await this.countWithReplies(filters, viewer, {
+        filterBlocked,
+      });
+
+      // 并行附加多个状态，提升性能
+      await Promise.all([
+        // 附加举报信息
+        await this.attachReportInfo(comments),
+
+        await this.attachIsAdminFlag(comments),
+
+        await this.attachLikeStatus(comments, viewer),
+      ]);
 
       // 附加"是否已被当前访客屏蔽"的信息
       if (!filterBlocked && viewer?.viewerId) {
         await this.attachBlockStatus(comments, viewer.viewerId);
       }
 
-      await this.attachLikeStatus(comments, viewer);
-
-      return { comments, total };
+      return { comments, total, totalWithReplies };
     } catch (error) {
       logger.error('获取评论列表失败:', error);
       throw error;
     }
   }
 
+  /**
+   * 为评论附加"作者是否为管理员"标记
+   */
+  private async attachIsAdminFlag(comments: Comment[]): Promise<void> {
+    if (comments.length === 0) return;
+
+    // 1. 收集所有评论者的邮箱
+    const emails: string[] = [];
+    const collect = (list: Comment[]) => {
+      list.forEach(c => {
+        if (c.user?.email) emails.push(c.user.email);
+        if (c.replies?.length) collect(c.replies);
+      });
+    };
+    collect(comments);
+
+    if (emails.length === 0) return;
+
+    // 2. 查询这些邮箱中哪些是注册管理员
+    const adminUsers = (await User.findAll({
+      where: {
+        email: { [Op.in]: [...new Set(emails)] },
+        role: 'admin',
+      },
+      attributes: ['email'],
+      raw: true,
+    })) as any[];
+
+    const adminEmails = new Set(adminUsers.map(u => u.email));
+
+    // 3. 附加 isAdmin 到每条评论
+    const attach = (list: Comment[]) => {
+      list.forEach(c => {
+        c.isAdmin = adminEmails.has(c.user?.email);
+        if (c.replies?.length) attach(c.replies);
+      });
+    };
+    attach(comments);
+  }
+
+  /**
+   * 统计含回复的评论总数
+   */
+  private async countWithReplies(
+    filters: CommentFilters = {},
+    viewer?: ViewerContext,
+    options: { filterBlocked?: boolean } = {}
+  ): Promise<number> {
+    const { filterBlocked = true } = options;
+    const where: WhereOptions = {};
+
+    // 与 getComments 保持一致的过滤条件（但不限制 parentId）
+    if (filters.status) where.status = filters.status;
+    else where.status = 'approved';
+    if (filters.blogId) where.blogId = filters.blogId;
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.search) where.content = { [Op.like]: `%${filters.search}%` };
+
+    // 个人屏蔽过滤
+    if (filterBlocked && viewer?.viewerId) {
+      const personalBlocks = await CommentBlockPersonal.findAll({
+        where: { blockerId: viewer.viewerId },
+        attributes: ['blockedId'],
+        raw: true,
+      });
+      const blockedUserIds = personalBlocks.map(b => b.blockedId);
+      if (blockedUserIds.length > 0) {
+        where.userId = { ...where.userId, [Op.notIn]: blockedUserIds };
+      }
+    }
+
+    // 直接 COUNT 全部（顶级 + 回复）
+    // 注意：不加 parentId 条件，这样统计的是所有评论
+    return await Comment.count({ where });
+  }
   /**
    * 为评论列表附加举报信息
    */

@@ -109,6 +109,13 @@ class Comment extends Model {
 
   @Column({ type: DataType.VIRTUAL })
   isLiked!: boolean;
+
+  // 虚拟字段：是否是管理员
+  @Column({
+    type: DataType.VIRTUAL,
+    defaultValue: false,
+  })
+  isAdmin!: boolean;
 }
 
 export default Comment;

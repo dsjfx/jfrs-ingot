@@ -45,6 +45,25 @@ export class ResponseFactory {
     );
   }
 
+  static page2<T>(data: T[], page: Pagination2, message?: string): ResponseData<PageResult2<T>> {
+    const { current, size, total, totalplus } = page;
+    return this.success(
+      {
+        records: data || [],
+        pagination: {
+          current,
+          size,
+          total,
+          totalplus,
+          pages: Math.ceil(total / size),
+          hasNext: current * size < total,
+          hasPrev: current > 1,
+        },
+      },
+      message
+    );
+  }
+
   static pageAlbum(data: Album, page: Pagination, message?: string): ResponseData<PageResultAlbum> {
     const { current, size, total } = page;
     return this.success(
@@ -99,6 +118,15 @@ export interface Pagination {
   pages?: number;
   hasNext?: boolean;
   hasPrev?: boolean;
+}
+
+export interface Pagination2 extends Pagination {
+  totalplus: number;
+}
+
+export interface PageResult2<T> {
+  records: T[];
+  pagination: Pagination2;
 }
 
 export interface PageResultAlbum {

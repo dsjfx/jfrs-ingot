@@ -273,12 +273,23 @@ class CommentApi {
 
       const { current, size, viewerId, viewerEmail, ...filters } = value;
 
-      const { comments, total } = await CommentService.getComments(current, size, filters, {
-        viewerId,
-        viewerEmail,
-      });
+      const { comments, total, totalWithReplies } = await CommentService.getComments(
+        current,
+        size,
+        filters,
+        {
+          viewerId,
+          viewerEmail,
+        }
+      );
 
-      res.json(ResponseFactory.page(comments, { current, size, total }, '查询评论成功'));
+      res.json(
+        ResponseFactory.page2(
+          comments,
+          { current, size, total, totalplus: totalWithReplies },
+          '查询评论成功'
+        )
+      );
     } catch (error) {
       next(error);
     }
