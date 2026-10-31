@@ -18,6 +18,7 @@ import { generateRandomOffsets, getMonthName } from '../utils/FuncUtil';
 import { PhotoData } from '../types/photo';
 import PhotoService from './PhotoService';
 import Constance from '../utils/Constance';
+import BlogReactionService from './BlogReactionService';
 
 class BlogService {
   /**
@@ -48,7 +49,7 @@ class BlogService {
         await blog.$set('tags', blogData.tagIds);
       }
 
-      // if publish and no set published date, use create date 
+      // if publish and no set published date, use create date
       if (!blog.publishedAt && blogData.status === 'published') {
         blog.publishedAt = blog.createdAt;
         await blog.save();
@@ -300,32 +301,22 @@ class BlogService {
   async getBlogs(
     current: number = 1,
     size: number = 10,
-    filters: BlogFilters = {}
+    filters: BlogFilters = {},
+    viewer?: { userId?: string; anonymousId?: string }
   ): Promise<{ blogs: Blog[]; total: number }> {
     try {
       const offset = (current - 1) * size;
-      const where: any = {};
+      const where: WhereOptions = {};
 
-      if (filters.subject) {
-        where.subject = filters.subject;
-      }
-
-      if (filters.status) {
-        where.status = filters.status;
-      }
-
-      if (filters.categoryId) {
-        where.categoryId = filters.categoryId;
-      }
-
-      if (filters.authorId) {
-        where.authorId = filters.authorId;
-      }
+      if (filters.subject) where.subject = filters.subject;
+      if (filters.status) where.status = filters.status;
+      if (filters.categoryId) where.categoryId = filters.categoryId;
+      if (filters.authorId) where.authorId = filters.authorId;
 
       if (filters.search) {
-        where[Op.or] = [
+        where[Op.or as any] = [
           { title: { [Op.like]: `%${filters.search}%` } },
-          { subtitle: { [Op.like]: `%${filters.search}%`} },
+          { subtitle: { [Op.like]: `%${filters.search}%` } },
           { content: { [Op.like]: `%${filters.search}%` } },
         ];
       }
@@ -342,6 +333,17 @@ class BlogService {
         limit: size,
         order: [['publishedAt', 'DESC']],
       });
+
+      // 批量查询当前用户对所有文章的反应状态
+      if (blogs.length > 0) {
+        const blogIds = blogs.map(b => String(b.id));
+        const reactionMap = await BlogReactionService.getReactionStatusBatch(blogIds, viewer || {});
+
+        // 附加到每篇文章
+        blogs.forEach(blog => {
+          blog.reaction = reactionMap.get(String(blog.id)) || 0;
+        });
+      }
 
       return { blogs, total };
     } catch (error) {

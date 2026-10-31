@@ -14,6 +14,7 @@ import CommentBlock from './CommentBlock';
 import CommentBlockPersonal from './CommentBlockPersonal';
 import CommentLike from './CommentLike';
 import Photo from './Photo';
+import BlogReaction from './BlogReaction';
 
 /**
  * 初始化所有模型并设置关联关系
@@ -22,6 +23,7 @@ import Photo from './Photo';
 sequelize.addModels([
   User,
   Blog,
+  BlogReaction,
   Category,
   Tag,
   BlogTag,
@@ -86,6 +88,7 @@ export {
   Op,
   User,
   Blog,
+  BlogReaction,
   Category,
   Tag,
   BlogTag,
@@ -101,6 +104,7 @@ export {
 export default {
   User,
   Blog,
+  BlogReaction,
   Category,
   Tag,
   BlogTag,

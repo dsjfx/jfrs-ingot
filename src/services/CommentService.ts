@@ -130,19 +130,6 @@ class CommentService {
         }
       }
 
-      // // 验证回复的评论是否存在（如果是回复特定评论）
-      // if (replyToId) {
-      //   const replyToComment = await Comment.findByPk(replyToId, { transaction });
-      //   if (!replyToComment) {
-      //     throw new AppError('回复的评论不存在', 404);
-      //   }
-
-      //   // 确保回复的评论属于同一博客
-      //   if (replyToComment.blogId !== blogId) {
-      //     throw new AppError('回复的评论不属于该博客', 400);
-      //   }
-      // }
-
       const comment = await Comment.create(
         {
           blogId,

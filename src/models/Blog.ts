@@ -14,6 +14,7 @@ import Tag from './Tag';
 import BlogTag from './BlogTag';
 import { EBlogType, EBlogVisibility, ECommentPermission } from '../core/Enumers';
 import Photo from './Photo';
+import { ReactionType } from './BlogReaction';
 
 @Table({
   tableName: 'ingot_blogs',
@@ -174,6 +175,26 @@ class Blog extends Model {
   // 添加关联：一篇博客有多张照片
   @HasMany(() => Photo)
   photos!: Photo[];
+
+  @Column({
+    type: DataType.INTEGER,
+    defaultValue: 0,
+    field: 'like_count',
+  })
+  likeCount!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    defaultValue: 0,
+    field: 'dislike_count',
+  })
+  dislikeCount!: number;
+
+  @Column({
+    type: DataType.VIRTUAL,
+    defaultValue: 0,
+  })
+  reaction!: ReactionType | 0;
 }
 
 export default Blog;

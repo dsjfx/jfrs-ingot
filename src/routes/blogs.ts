@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import BlogApi from '../api/BlogApi';
 import CommentApi from '../api/CommentApi';
+import BlogReactionApi from '../api/BlogReactionApi';
 import {
   authenticateToken,
   authorizeRoles,
@@ -14,6 +15,8 @@ const router: Router = Router();
 const blogApi = new BlogApi();
 
 const commentApi = new CommentApi();
+
+const reactionApi = new BlogReactionApi();
 
 // 公共路由
 router.get('/list', optionalAuth, blogApi.getBlogs);
@@ -31,6 +34,11 @@ router.get('/adjacent/author/:id', blogApi.getAdjacentBlogsBySameAuthor);
 // 归档路由
 router.get('/archive', blogApi.getArchive);
 router.get('/archive/more', blogApi.getArchiveMore);
+
+// 查询单篇文章反应状态
+router.get('/reactions/:blogId', reactionApi.getReaction);
+// 切换反应（点赞/不喜欢/取消）
+router.post('/reactions/toggle', reactionApi.toggle);
 
 router.use(authenticateToken); // 以下所有路由都需要认证
 

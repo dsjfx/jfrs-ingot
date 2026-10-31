@@ -125,8 +125,12 @@ class BlogApi {
       }
 
       const { current, size, ...filters } = value;
+      const viewer = {
+        userId: req.query.userId as string | undefined,
+        anonymousId: req.query.anonymousId as string | undefined,
+      };
 
-      const { blogs, total } = await BlogService.getBlogs(current, size, filters);
+      const { blogs, total } = await BlogService.getBlogs(current, size, filters, viewer);
 
       res.json(ResponseFactory.page(blogs, { current, size, total }, '博客数据查询成功'));
     } catch (error) {
