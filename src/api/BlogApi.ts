@@ -148,7 +148,11 @@ class BlogApi {
         throw new AppError('无效的博客ID', 400);
       }
 
-      const blog = await BlogService.getBlogById(id);
+      // 获取访客身份
+      const userId = req.query.userId as string | undefined;
+      const anonymousId = req.query.anonymousId as string | undefined;
+
+      const blog = await BlogService.getBlogById(id, { userId, anonymousId });
 
       res.json(ResponseFactory.success(blog, '查询博客详情成功'));
     } catch (error) {

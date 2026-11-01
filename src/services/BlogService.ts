@@ -352,7 +352,7 @@ class BlogService {
     }
   }
 
-  async getBlogById(id: number): Promise<Blog> {
+  async getBlogById(id: number, viewer?: { userId?: string; anonymousId?: string }): Promise<Blog> {
     try {
       const blog = await Blog.findByPk(id, {
         include: [
@@ -373,6 +373,10 @@ class BlogService {
       // 增加浏览量
       blog.views += 1;
       await blog.save();
+
+      // 获取当前用户对该文章的反应状态
+      const reactionInfo = await BlogReactionService.getReactionStatus(String(id), viewer || {});
+      blog.setDataValue('reaction', reactionInfo.reaction);
 
       return blog;
     } catch (error) {

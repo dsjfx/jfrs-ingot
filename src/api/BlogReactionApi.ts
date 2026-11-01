@@ -3,7 +3,6 @@ import Joi from 'joi';
 import BlogReactionService from '../services/BlogReactionService';
 import { ReactionType } from '../models/BlogReaction';
 import { AppError } from '../middleware/errorHandler';
-import { Blog } from '@/models';
 import { ResponseFactory } from '@/utils/ResponseFactory';
 
 class BlogReactionApi {
@@ -61,24 +60,20 @@ class BlogReactionApi {
    */
   async getReaction(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const blogId = parseInt(req.params.blogId as string, 10);
+      const blogId = req.params.blogId as string;
       if (!blogId) throw new AppError('缺少文章ID', 400);
 
       const userId = req.query.userId as string | undefined;
       const anonymousId = req.query.anonymousId as string | undefined;
 
-      // 复用批量方法查单条
-      const map = await BlogReactionService.getReactionStatusBatch([`${blogId}`], {
-        userId,
-        anonymousId,
-      });
+      const result = await BlogReactionService.getReactionStatus(blogId, { userId, anonymousId });
 
-      // 获取文章总数
-      const blog = await Blog.findByPk(blogId, {
-        attributes: ['likeCount', 'dislikeCount'],
-      });
+      // // 获取文章总数
+      // const blog = await Blog.findByPk(blogId, {
+      //   attributes: ['likeCount', 'dislikeCount'],
+      // });
 
-      if (!blog) throw new AppError('文章不存在', 404);
+      // if (!blog) throw new AppError('文章不存在', 404);
 
       // res.json({
       //   success: true,
@@ -88,13 +83,7 @@ class BlogReactionApi {
       //     dislikeCount: blog.dislikeCount,
       //   },
       // });
-      res.json(
-        ResponseFactory.success({
-          reaction: map.get(`${blogId}`) || 0,
-          likeCount: blog.likeCount,
-          dislikeCount: blog.dislikeCount,
-        })
-      );
+      res.json(ResponseFactory.success(result, '查询文章反应状态成功'));
     } catch (error) {
       next(error);
     }

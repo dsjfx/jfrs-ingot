@@ -185,6 +185,46 @@ class BlogReactionService {
       return result; // 出错时降级为全0，不阻断列表加载
     }
   }
+
+  /**
+   * 根据文章ID查询单个反应状态数据
+   * @param blogId 文章ID
+   * @param viewer 访客/登录用户标识
+   */
+  async getReactionStatus(
+    blogId: string,
+    viewer: ViewerContext
+  ): Promise<{
+    reaction: ReactionType | 0; // 当前用户的操作：1-赞，-1-踩，0-未操作
+    likeCount: number; // 总点赞数
+    dislikeCount: number; // 总不喜欢数
+  }> {
+    try {
+      // 1. 校验文章存在，并获取冗余计数
+      const blog = await Blog.findByPk(blogId, {
+        attributes: ['likeCount', 'dislikeCount'],
+      });
+
+      if (!blog) {
+        throw new AppError('文章不存在', 404);
+      }
+
+      // 2. 获取当前用户对该文章的反应状态
+      // 直接复用你已有的批量查询方法，传入单元素数组
+      const map = await this.getReactionStatusBatch([blogId], viewer);
+      const reaction = map.get(blogId) || 0;
+
+      // 3. 返回结果
+      return {
+        reaction,
+        likeCount: blog.likeCount || 0,
+        dislikeCount: blog.dislikeCount || 0,
+      };
+    } catch (error) {
+      logger.error(`查询文章 ${blogId} 反应状态失败:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new BlogReactionService();
