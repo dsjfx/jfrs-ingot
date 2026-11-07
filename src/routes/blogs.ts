@@ -31,10 +31,6 @@ router.get('/adjacent/:id', blogApi.getAdjacentBlogs);
 router.get('/adjacent/category/:id', blogApi.getAdjacentBlogsInSameCategory);
 router.get('/adjacent/author/:id', blogApi.getAdjacentBlogsBySameAuthor);
 
-// 归档路由
-router.get('/archive', blogApi.getArchive);
-router.get('/archive/more', blogApi.getArchiveMore);
-
 // 查询单篇文章反应状态
 router.get('/reactions/:blogId', reactionApi.getReaction);
 // 切换反应（点赞/不喜欢/取消）

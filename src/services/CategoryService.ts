@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import Category from '../models/Category';
 import Blog from '../models/Blog';
 import User from '../models/User';
@@ -45,7 +45,7 @@ class CategoryService {
   ): Promise<{ categories: Category[]; total: number }> {
     try {
       const offset = (current - 1) * size;
-      const where: any = {};
+      const where: WhereOptions = {};
 
       if (filters.search) {
         where.name = { [Op.like]: `%${filters.search}%` };
@@ -79,7 +79,7 @@ class CategoryService {
     try {
       const { sortBy = 'name', sortOrder = 'ASC' } = options;
 
-      const where: any = {};
+      const where: WhereOptions = {};
 
       const categories = await Category.findAll({
         where,

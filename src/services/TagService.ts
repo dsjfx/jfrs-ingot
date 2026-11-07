@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import Tag from '../models/Tag';
 import Blog from '../models/Blog';
 import User from '../models/User';
@@ -73,7 +73,7 @@ class TagService {
   async getAllTags(options: { sortBy?: string; sortOrder?: 'ASC' | 'DESC' } = {}): Promise<Tag[]> {
     try {
       const { sortBy = 'name', sortOrder = 'ASC' } = options;
-      const where: any = {};
+      const where: WhereOptions = {};
 
       const tags = await Tag.findAll({
         where,

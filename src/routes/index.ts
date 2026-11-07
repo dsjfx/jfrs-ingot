@@ -8,6 +8,7 @@ import commentRoutes from './comments';
 import photoRoutes from './photos';
 import tagRoutes from './tags';
 import uploadRoutes from './upload';
+import archiveRoutes from './archive';
 
 const router: Router = Router();
 
@@ -24,6 +25,7 @@ router.use(`${API_PREFIX}/captcha`, captchaRoutes);
 router.use(`${API_PREFIX}/upload`, uploadRoutes);
 router.use(`${API_PREFIX}/photos`, photoRoutes);
 router.use(`${API_PREFIX}/assist`, assistRoutes); // 添加 assist 路由
+router.use(`${API_PREFIX}/archive`, archiveRoutes); // 添加归档路由
 
 // API 根路径
 router.get(API_PREFIX, (_req, res) => {
