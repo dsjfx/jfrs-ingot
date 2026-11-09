@@ -6,7 +6,7 @@ import {
   ArchiveOptions,
   ArchiveResponse,
   ArchiveYearData,
-} from '@/types/archive';
+} from '../types/archive';
 import { getMonthName } from '../utils/FuncUtil';
 import Constance from '../utils/Constance';
 

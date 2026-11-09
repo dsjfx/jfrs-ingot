@@ -3,7 +3,7 @@ import Joi from 'joi';
 import BlogReactionService from '../services/BlogReactionService';
 import { ReactionType } from '../models/BlogReaction';
 import { AppError } from '../middleware/errorHandler';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class BlogReactionApi {
   static toggleSchema = Joi.object({

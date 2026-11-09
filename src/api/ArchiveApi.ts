@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import ArchiveService from '@/services/ArchiveService';
-import Constance from '@/utils/Constance';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import ArchiveService from '../services/ArchiveService';
+import Constance from '../utils/Constance';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class ArchiveApi {
   /**
