@@ -299,7 +299,6 @@ class BlogService {
 
       if (filters.subject) where.subject = filters.subject;
       if (filters.status) where.status = filters.status;
-      else where.status = 'published';
       if (filters.categoryId) where.categoryId = filters.categoryId;
       if (filters.authorId) where.authorId = filters.authorId;
 
