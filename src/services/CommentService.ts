@@ -387,7 +387,7 @@ class CommentService {
 
       // 其他过滤条件
       if (filters.status) where.status = filters.status;
-      else where.status = 'approved';
+      else where.status = { [Op.in]: ['approved', 'pending'] };
       if (filters.blogId) where.blogId = filters.blogId;
       if (filters.userId) where.userId = filters.userId;
       if (filters.search) where.content = { [Op.like]: `%${filters.search}%` };
@@ -558,7 +558,7 @@ class CommentService {
 
     // 与 getComments 保持一致的过滤条件（但不限制 parentId）
     if (filters.status) where.status = filters.status;
-    else where.status = 'approved';
+    else where.status = { [Op.in]: ['approved', 'pending'] };
     if (filters.blogId) where.blogId = filters.blogId;
     if (filters.userId) where.userId = filters.userId;
     if (filters.search) where.content = { [Op.like]: `%${filters.search}%` };

@@ -1,13 +1,14 @@
-import { WhereOptions } from 'sequelize';
+import { QueryTypes, WhereOptions } from 'sequelize';
 import BlogReactionService from './BlogReactionService';
 import PhotoService from './PhotoService';
-import { Op, Blog, Category, Tag, User, Comment } from '../models';
+import { Op, Blog, Category, Tag, User, Comment, sequelize } from '../models';
 import { AppError } from '../middleware/errorHandler';
 import type { BlogFilters } from '../types/blog';
 import { PhotoData } from '../types/photo';
 import { generateRandomOffsets } from '../utils/FuncUtil';
 import Constance from '../utils/Constance';
 import logger from '../utils/logger';
+import { EBlogVisibility } from '@/core/Enumers';
 
 class BlogService {
   /**
@@ -287,11 +288,19 @@ class BlogService {
     }
   }
 
+  /**
+   * 获取博客列表
+   * Get a list of blogs with optional filters and pagination.
+   * @param current
+   * @param size
+   * @param filters
+   * @param viewer
+   */
   async getBlogs(
     current: number = 1,
     size: number = 10,
     filters: BlogFilters = {},
-    viewer?: { userId?: string; anonymousId?: string }
+    viewer?: { userId?: string; anonymousId?: string; role?: string }
   ): Promise<{ blogs: Blog[]; total: number }> {
     try {
       const offset = (current - 1) * size;
@@ -309,6 +318,30 @@ class BlogService {
           { content: { [Op.like]: `%${filters.search}%` } },
           { summary: { [Op.like]: `%${filters.search}%` } },
         ];
+      }
+
+      // 未登录游客：只能看 PUBLIC
+      if (viewer?.anonymousId) {
+        where.visibility = EBlogVisibility.PUBLIC;
+      } else {
+        const isAdmin = viewer?.role === 'admin';
+
+        // 普通登录用户
+        if (!isAdmin) {
+          where[Op.or as any] = [
+            { visibility: EBlogVisibility.PUBLIC },
+            { visibility: EBlogVisibility.REGISTER },
+            {
+              // 自己写的私密/角色文章，自己能在列表中看到
+              [Op.and]: [
+                { visibility: { [Op.in]: [EBlogVisibility.ROLE, EBlogVisibility.PRIVATE] } },
+                { authorId: viewer?.userId },
+              ],
+            },
+          ];
+        } else {
+          // 设管理员在前台能看到所有已发布的
+        }
       }
 
       // 构建 include 数组
@@ -342,10 +375,27 @@ class BlogService {
         distinct: true,
       });
 
+      if (blogs.length === 0) {
+        return { blogs, total };
+      }
+
+      const blogIds: number[] = blogs.map(b => b.id);
+
+      // 批量查询并附加评论数量
+      const commentCountMap = await this.getCommentCounts(blogIds);
+
+      blogs.forEach(blog => {
+        // 附加到 Sequelize 模型实例上，序列化时会自动带出
+        blog.comments = commentCountMap.get(blog.id) || 0;
+      });
+
       // 批量查询当前用户对所有文章的反应状态
       if (blogs.length > 0) {
-        const blogIds = blogs.map(b => String(b.id));
-        const reactionMap = await BlogReactionService.getReactionStatusBatch(blogIds, viewer || {});
+        const blogIdStrs = blogs.map(b => String(b.id));
+        const reactionMap = await BlogReactionService.getReactionStatusBatch(
+          blogIdStrs,
+          viewer || {}
+        );
 
         // 附加到每篇文章
         blogs.forEach(blog => {
@@ -360,7 +410,10 @@ class BlogService {
     }
   }
 
-  async getBlogById(id: number, viewer?: { userId?: string; anonymousId?: string }): Promise<Blog> {
+  async getBlogById(
+    id: number,
+    viewer?: { userId?: string; anonymousId?: string; role?: string }
+  ): Promise<Blog> {
     try {
       const blog = await Blog.findByPk(id, {
         include: [
@@ -374,13 +427,49 @@ class BlogService {
         throw new AppError('博客不存在', 404);
       }
 
+      // 核心：可见性鉴权逻辑
+      const isAuthor = viewer?.userId === `${blog.authorId}`;
+      const isAdmin = viewer?.role === 'admin';
+
+      switch (blog.visibility) {
+        case EBlogVisibility.PUBLIC:
+          // 公开：任何人可看
+          break;
+
+        case EBlogVisibility.REGISTER:
+          // 仅登录可见
+          if (!viewer?.userId) {
+            throw new AppError('该文章仅登录用户可见', 403);
+          }
+          break;
+
+        case EBlogVisibility.ROLE:
+          // 基于角色。比如只有 admin 和 editor 能看
+          if (!viewer?.userId || (viewer.role !== 'admin' && viewer.role !== 'editor')) {
+            throw new AppError('您没有权限访问该文章', 403);
+          }
+          break;
+
+        case EBlogVisibility.PRIVATE:
+          // 仅作者和管理员可见
+          if (!isAuthor && !isAdmin) {
+            throw new AppError('该文章为私密文章，无权访问', 403);
+          }
+          break;
+
+        default:
+          throw new AppError('未知的可见性状态', 500);
+      }
+
       PhotoService.getPhotosByBlogId(id).then(photos => {
         blog.photos = photos;
       });
 
-      // 增加浏览量
-      blog.views += 1;
-      await blog.save();
+      // 增加浏览量...（非公开文章作者自己看时不加浏览量）
+      if (blog.visibility === EBlogVisibility.PUBLIC || !isAuthor) {
+        blog.views += 1;
+        await blog.save();
+      }
 
       // 获取当前用户对该文章的反应状态
       const reactionInfo = await BlogReactionService.getReactionStatus(String(id), viewer || {});
@@ -467,6 +556,45 @@ class BlogService {
     } catch (error) {
       logger.error('获取博客评论失败:', error);
       throw error;
+    }
+  }
+
+  /**
+   * 批量获取文章的评论数量（包含回复）
+   * @param blogIds 文章ID数组
+   * @returns Map<blogId, count>
+   */
+  private async getCommentCounts(blogIds: number[]): Promise<Map<number, number>> {
+    const result = new Map<number, number>();
+    if (blogIds.length === 0) return result;
+
+    // 初始化所有文章评论数为 0
+    blogIds.forEach(id => result.set(id, 0));
+
+    try {
+      // 使用原生 SQL 进行 GROUP BY 批量统计，性能极高
+      const counts = (await sequelize.query(
+        `SELECT blog_id blogId, COUNT(id) as count 
+         FROM ingot_comment
+         WHERE blog_id IN (:blogIds) 
+           AND status IN ('approved', 'pending')
+           AND deleted_at IS NULL 
+         GROUP BY blogId`,
+        {
+          replacements: { blogIds },
+          type: QueryTypes.SELECT,
+        }
+      )) as Array<{ blogId: number; count: string }>;
+
+      // 将结果写入 Map
+      counts.forEach(item => {
+        result.set(item.blogId, parseInt(item.count, 10));
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('批量查询评论数量失败:', error);
+      return result; // 出错时返回全 0，不阻断列表加载
     }
   }
 

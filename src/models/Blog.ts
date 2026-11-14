@@ -195,6 +195,12 @@ class Blog extends Model {
     defaultValue: 0,
   })
   reaction!: ReactionType | 0;
+
+  @Column({
+    type: DataType.VIRTUAL,
+    defaultValue: 0,
+  })
+  comments!: number; // 虚拟字段，用于存储评论数量
 }
 
 export default Blog;
