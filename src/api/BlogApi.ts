@@ -61,8 +61,8 @@ class BlogApi {
     tagId: Joi.number().integer().positive().optional(),
     authorId: Joi.number().integer().positive().optional(),
     search: Joi.string().max(100).empty('').optional(),
-    // sortBy: Joi.string().valid('createdAt', 'updatedAt', 'views', 'title').default('createdAt'),
-    // sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('DESC'),
+    sortBy: Joi.string().valid('publishedAt', 'updatedAt', 'views', 'title').default('publishedAt'),
+    sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('DESC'),
   }).unknown(true);
 
   /**
@@ -130,6 +130,12 @@ class BlogApi {
         anonymousId: req.query.anonymousId as string | undefined,
         role: req.query.role as string | undefined,
       };
+      const currentUser = (req as any).user;
+
+      if (currentUser) {
+        viewer.userId = currentUser.id;
+        viewer.role = currentUser.role;
+      }
 
       const { blogs, total } = await BlogService.getBlogs(current, size, filters, viewer);
 

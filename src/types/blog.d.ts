@@ -164,6 +164,8 @@ export interface BlogFilters {
   authorId?: number;
   search?: string;
   isTop?: number; // 添加置顶筛选
+  sortBy?: 'updatedAt' | 'views' | 'publishedAt' | 'title';
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
 }
 
 export default {

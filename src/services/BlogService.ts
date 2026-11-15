@@ -320,6 +320,7 @@ class BlogService {
         ];
       }
 
+      // 可见性过滤逻辑
       // 未登录游客：只能看 PUBLIC
       if (viewer?.anonymousId) {
         where.visibility = EBlogVisibility.PUBLIC;
@@ -340,7 +341,7 @@ class BlogService {
             },
           ];
         } else {
-          // 设管理员在前台能看到所有已发布的
+          // 假设管理员在前台能看到所有已发布的
         }
       }
 
@@ -371,7 +372,7 @@ class BlogService {
         include: includeOptions,
         offset,
         limit: size,
-        order: [['publishedAt', 'DESC']],
+        order: [[filters.sortBy || 'publishedAt', filters.sortOrder || 'DESC']],
         distinct: true,
       });
 

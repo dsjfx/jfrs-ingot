@@ -23,8 +23,10 @@ class TokenService {
   generateAccessToken(user: User, appType: string): string {
     const payload: TokenPayload = {
       sub: `${user.id}`,
+      id: user.id,
       username: user.username,
       role: user.role,
+      email: user.email,
       jti: uuidv4(), // JWT ID，用于黑名单
     };
 

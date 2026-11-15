@@ -8,7 +8,9 @@ export interface TokenPayload {
   aud?: string | string[]; // Audience - 受众
 
   // 自定义业务字段
+  id: number; // 用户ID
   username: string; // 用户名
+  email: string; // 用户邮箱
   role: string; // 用户角色
   app?: string; // 当前应用 (blog/admin)
   permissions?: string[]; // 权限列表
