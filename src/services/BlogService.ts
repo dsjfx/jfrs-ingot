@@ -8,7 +8,7 @@ import { PhotoData } from '../types/photo';
 import { generateRandomOffsets } from '../utils/FuncUtil';
 import Constance from '../utils/Constance';
 import logger from '../utils/logger';
-import { EBlogVisibility } from '@/core/Enumers';
+import { EBlogVisibility } from '../core/Enumers';
 
 class BlogService {
   /**
@@ -577,7 +577,7 @@ class BlogService {
         `SELECT blog_id blogId, COUNT(id) as count 
          FROM ingot_comment
          WHERE blog_id IN (:blogIds) 
-           AND status IN ('approved', 'pending')
+           AND status IN ('approved', 'pending') 
            AND deleted_at IS NULL 
          GROUP BY blogId`,
         {
