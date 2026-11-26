@@ -156,11 +156,19 @@ class BlogApi {
       }
 
       // 获取访客身份
-      const userId = req.query.userId as string | undefined;
-      const anonymousId = req.query.anonymousId as string | undefined;
-      const role = req.query.role as string | undefined;
+      const viewer = {
+        userId: req.query.userId as string | undefined,
+        anonymousId: req.query.anonymousId as string | undefined,
+        role: req.query.role as string | undefined,
+      };
+      const currentUser = (req as any).user;
 
-      const blog = await BlogService.getBlogById(id, { userId, anonymousId, role });
+      if (currentUser) {
+        viewer.userId = currentUser.id;
+        viewer.role = currentUser.role;
+      }
+
+      const blog = await BlogService.getBlogById(id, viewer);
 
       res.json(ResponseFactory.success(blog, '查询博客详情成功'));
     } catch (error) {
