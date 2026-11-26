@@ -3,7 +3,7 @@ import Joi from 'joi';
 import RequirementService from '../services/RequirementService';
 import { AppError } from '../middleware/errorHandler';
 import { PriorityEnum, StatusEnum, CategoryEnum, SourceEnum } from '../models/Requirement';
-import { ResponseFactory } from '@/utils/ResponseFactory';
+import { ResponseFactory } from '../utils/ResponseFactory';
 
 class RequirementApi {
   // 创建/更新的校验规则
